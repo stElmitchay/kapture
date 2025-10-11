@@ -60,47 +60,75 @@ Today is: {today}
 
 Below is OCR-extracted text from screenshots taken throughout the day. The text is messy and fragmented because it's from OCR.
 
-CRITICAL RULES - READ CAREFULLY:
-1. ONLY report what you can DIRECTLY OBSERVE in the screenshots
-2. DO NOT infer, assume, or guess activities that aren't clearly visible
-3. DO NOT make up tasks based on what you think the user should have done
-4. If you see code editors, browser tabs, terminals - describe ONLY what's visible in the text
-5. IGNORE: advertisements, social media browsing, entertainment, personal content, UI chrome
-6. BE CONSERVATIVE: If unsure whether something is work, DON'T include it
-7. Write in first person ("I worked on...", "I completed...")
-8. Be specific - use actual project names, file names, technologies you see in the screenshots
-9. DO NOT fabricate completion status - only mark as completed if there's clear evidence
-10. If you see very little work content, it's OK to have a short summary
+UNDERSTANDING THE CONTEXT:
+Screenshots capture what the user is LOOKING AT on their screen, NOT what they created. You must carefully distinguish between:
+- Content the user is CONSUMING (reading, browsing, viewing)
+- Content the user is PRODUCING (writing, editing, building, coding)
 
-QUALITY CHECK BEFORE RESPONDING:
-- Can I point to specific text in the OCR that supports this item? If NO, remove it.
-- Am I making assumptions about what happened? If YES, remove it.
-- Is this based on visible evidence? If NO, remove it.
+CRITICAL RULES:
+1. **Code Editors (VS Code, PyCharm, etc.)**:
+   - Look for filenames in window titles or visible in the editor
+   - Report: "Edited [filename]" or "Worked on [project/file]"
+   - Don't report: generic code snippets without context
+
+2. **Terminal/Command Line**:
+   - Report commands the user typed and ran
+   - Report: "Ran tests", "Deployed to production", "Installed dependencies"
+   - Don't report: command output unless it shows errors/blockers
+
+3. **Web Browsers**:
+   - This is where most errors happen! Be very careful here.
+   - If viewing documentation/tutorials: Report "Researched [topic/technology]"
+   - DO NOT report example code, sample projects, or tutorial content as work done
+   - Example: Seeing "Build a Todo App Tutorial" → Report: "Researched web app development"
+   - Example: Seeing tutorial code for a chat app → Report: "Studied chat application patterns"
+   - DO NOT say "I built X" unless you see it in a code editor with filenames
+
+4. **Documentation/Tutorial Sites**:
+   - These show EXAMPLE content, not YOUR content
+   - Only mention you researched/learned the topic
+   - Never claim you built the examples shown
+
+5. **Twitter/Social Media**:
+   - Only report if it's directly work-related (e.g., Solana news for your industry)
+   - Don't report casual browsing
+
+6. **Communication Tools (Slack, Discord, Email)**:
+   - Report topics discussed if work-related
+   - Don't include personal chats
+
+QUALITY CHECKS - Ask yourself for EACH item:
+1. Did I see this in a CODE EDITOR with a filename? → OK to report as "worked on"
+2. Did I see this run in a TERMINAL? → OK to report as "ran/executed"
+3. Did I see this on a WEBSITE/TUTORIAL? → Only report "researched [topic]", NOT the example content
+4. Can I identify a specific file, command, or project name? → Good, be specific
+5. Is this just example/demo content from a tutorial? → DO NOT report as work done
 
 OCR TEXT FROM SCREENSHOTS:
 {combined_text}
 
-Analyze ONLY what you can directly observe and generate a work summary in this EXACT format:
+Generate a summary in this EXACT format:
 
 WORKED_ON:
-[List ONLY tasks you can directly see evidence of in the screenshots. Be specific and cite what you saw (e.g., "Edited main.py file based on visible code", "Read documentation about Docker deployment"). If you cannot identify clear work activities, write "Limited work activity detected in screenshots"]
+[List ONLY activities where you saw the user CREATING something (editing files, writing code, running commands, building projects). Include specific filenames/projects. For web research, only say "Researched [topic]" - do NOT mention the example content shown. Minimum 3-8 items. If you see almost no actual work, write "Limited work activity detected"]
 
 COMPLETED:
-[List ONLY tasks with clear evidence of completion (e.g., closed PR, finished tutorial, deployed code). If no clear completions visible, write "No specific completions identified from screenshots"]
+[List ONLY tasks with clear evidence of completion (tests passing, PR merged, deployment succeeded, tutorial finished). Be conservative. If uncertain, write "No specific completions identified from screenshots"]
 
 SOLANA_NEWS:
-[List ONLY if you see actual Twitter/news content about Solana in the screenshots. Quote or paraphrase what you saw. If none found, write "No Solana news captured in screenshots"]
+[List ONLY if you see Twitter/news screenshots about Solana. Quote what you saw. If none, write "No Solana news captured in screenshots"]
 
 BLOCKERS:
-[List ONLY specific errors, failed commands, or explicit blocker statements you see in the screenshots. If none visible, write "No significant blockers identified"]
+[List ONLY specific errors, failed tests, or problems you see in terminal/console output. If none, write "No significant blockers identified"]
 
 TOMORROW_FOCUS:
-{"[Skip this section - it's Friday]" if is_friday else "[Based ONLY on incomplete work visible in screenshots, suggest 2-3 follow-up items. If unclear what should be next, write 'Continue with current project work']"}
+{"[Skip this section - it's Friday]" if is_friday else "[Based on what was started but not completed, suggest 2-3 specific next steps. If unclear, write 'Continue with current project work']"}
 
-ACCURACY CHECK:
-- Every item must be traceable to visible OCR text
-- Zero hallucination or assumption
-- When in doubt, leave it out
+FINAL CHECK - Before submitting, verify:
+✓ No example/tutorial content reported as user's work
+✓ Every "worked on" item is from code editor, terminal, or has specific filename/project
+✓ Web browsing reported only as "researched [topic]", not the examples shown
+✓ Zero hallucination - only what you actually saw
 """
 
     try:
