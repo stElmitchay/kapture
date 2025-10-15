@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import datetime, timedelta
 
 
 def init_db():
@@ -83,3 +84,42 @@ def get_screenshots(limit=None):
     results = cursor.fetchall()
     conn.close()
     return results
+
+
+def calculate_hours_worked_today(db_path="activity_log.db"):
+    """
+    Calculate total hours worked today based on screenshot timestamps.
+    Assumes screenshots are taken at regular intervals during active work.
+
+    Returns:
+        int: Number of hours worked (rounded)
+    """
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    # Get today's date range
+    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = today_start + timedelta(days=1)
+
+    # Get all screenshots from today
+    cursor.execute("""
+        SELECT timestamp FROM screenshots
+        WHERE timestamp >= ? AND timestamp < ?
+        ORDER BY timestamp ASC
+    """, (today_start.isoformat(), today_end.isoformat()))
+
+    timestamps = cursor.fetchall()
+    conn.close()
+
+    if not timestamps or len(timestamps) < 2:
+        return 0
+
+    # Parse timestamps
+    times = [datetime.fromisoformat(ts[0]) for ts in timestamps]
+
+    # Calculate time span from first to last screenshot
+    time_span = times[-1] - times[0]
+    hours_worked = time_span.total_seconds() / 3600
+
+    # Round to nearest hour
+    return int(round(hours_worked))

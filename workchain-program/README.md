@@ -1,6 +1,6 @@
 # WorkChain Smart Contract
 
-**Status:** ✅ Smart contract complete and compiled successfully!
+**Status:** ✅ DEPLOYED TO DEVNET + Python Integration Complete!
 
 ## What We Built
 
@@ -50,11 +50,37 @@ cargo build-sbf
 
 **Status:** ✅ Compiled successfully
 
-## Next Steps
+## Deployment Info
 
-1. Deploy to devnet
-2. Test with Anchor framework
-3. Integrate with Python (Loggerheads)
+**Network:** Solana Devnet
+**Deployed:** ✅ Yes
+**Deploy Transaction:** `3m8j8JBQuBDT8ain1E1CAiuiKy4Rz34ykBwpysaNtKVXreY8zSR6TcaN4BpktUAS1ehDBJxydLdV6BXtwd2nT92v`
+
+**Explorer Links:**
+- Program: https://explorer.solana.com/address/5BzzMPy2vJx6Spgcy6hsepQsdBdWAe9SmGvTqpssrk2D?cluster=devnet
+- Transaction: https://explorer.solana.com/tx/3m8j8JBQuBDT8ain1E1CAiuiKy4Rz34ykBwpysaNtKVXreY8zSR6TcaN4BpktUAS1ehDBJxydLdV6BXtwd2nT92v?cluster=devnet
+
+## Python Integration
+
+✅ Python blockchain integration complete!
+
+**New Files:**
+- `../loggerheads/blockchain.py` - Solana integration (submit, withdraw, vault info)
+- `../INTEGRATION_GUIDE.md` - Full testing and demo guide
+
+**CLI Commands:**
+```bash
+# Submit work hours
+loggerheads submit <employee_pubkey> <admin_pubkey>
+
+# Withdraw unlocked funds
+loggerheads withdraw <amount> <admin_pubkey> <vault_token> <owner_token>
+
+# Check vault status
+loggerheads vault-info <employee_pubkey> <admin_pubkey>
+```
+
+See `../INTEGRATION_GUIDE.md` for complete end-to-end testing instructions.
 
 ## Program ID
 
