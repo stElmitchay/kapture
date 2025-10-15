@@ -12,7 +12,7 @@ workchain_program = "5BzzMPy2vJx6Spgcy6hsepQsdBdWAe9SmGvTqpssrk2D"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
