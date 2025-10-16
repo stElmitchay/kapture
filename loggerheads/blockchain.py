@@ -16,6 +16,7 @@ from solana.rpc.api import Client
 from solana.rpc.commitment import Confirmed
 from solana.rpc.types import TxOpts
 import struct
+from .oracle import get_oracle_keypair
 
 
 # Program ID (deployed on devnet)
@@ -23,6 +24,12 @@ PROGRAM_ID = Pubkey.from_string("5BzzMPy2vJx6Spgcy6hsepQsdBdWAe9SmGvTqpssrk2D")
 
 # Token Program ID
 TOKEN_PROGRAM_ID = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
+
+# Associated Token Program ID
+ASSOCIATED_TOKEN_PROGRAM_ID = Pubkey.from_string("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL")
+
+# USDC Mint Address (Devnet)
+USDC_MINT = Pubkey.from_string("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU")
 
 # Default RPC endpoint
 DEFAULT_RPC_URL = "https://api.devnet.solana.com"
@@ -66,6 +73,64 @@ def derive_vault_pda(owner: Pubkey, admin: Pubkey) -> tuple[Pubkey, int]:
 
     pda, bump = Pubkey.find_program_address(seeds, PROGRAM_ID)
     return pda, bump
+
+
+def get_associated_token_address(wallet: Pubkey, mint: Pubkey = USDC_MINT) -> Pubkey:
+    """
+    Derive the Associated Token Account (ATA) address for a wallet and mint.
+
+    Args:
+        wallet: Wallet public key
+        mint: Token mint public key (defaults to USDC)
+
+    Returns:
+        Associated Token Account address
+    """
+    seeds = [
+        bytes(wallet),
+        bytes(TOKEN_PROGRAM_ID),
+        bytes(mint)
+    ]
+
+    ata, _ = Pubkey.find_program_address(seeds, ASSOCIATED_TOKEN_PROGRAM_ID)
+    return ata
+
+
+def derive_all_vault_addresses(employee_pubkey: str, admin_pubkey: str) -> dict:
+    """
+    Derive all vault-related addresses from just employee and admin wallets.
+
+    This is the magic function that makes employee setup simple!
+    Given just 2 wallet addresses, we can deterministically derive:
+    - Vault PDA
+    - Vault's token account
+    - Employee's token account
+
+    Args:
+        employee_pubkey: Employee wallet address (string)
+        admin_pubkey: Admin wallet address (string)
+
+    Returns:
+        Dict with all derived addresses
+    """
+    employee = Pubkey.from_string(employee_pubkey)
+    admin = Pubkey.from_string(admin_pubkey)
+
+    # Derive vault PDA
+    vault_pda, bump = derive_vault_pda(employee, admin)
+
+    # Derive token accounts (ATAs for USDC)
+    vault_token_account = get_associated_token_address(vault_pda, USDC_MINT)
+    employee_token_account = get_associated_token_address(employee, USDC_MINT)
+
+    return {
+        'employee_pubkey': employee_pubkey,
+        'admin_pubkey': admin_pubkey,
+        'vault_pda': str(vault_pda),
+        'vault_token_account': str(vault_token_account),
+        'employee_token_account': str(employee_token_account),
+        'bump': bump
+    }
 
 
 def get_vault_info(vault_pda: Pubkey, rpc_url: str = DEFAULT_RPC_URL) -> dict:
@@ -140,14 +205,17 @@ def submit_hours(
         hours_worked: Number of hours worked (integer)
         owner_pubkey: Employee wallet address (string)
         admin_pubkey: Admin wallet address (string)
-        oracle_keypair_path: Path to oracle keypair file
+        oracle_keypair_path: Path to oracle keypair file (uses embedded oracle if None)
         rpc_url: Solana RPC endpoint
 
     Returns:
         Transaction signature
     """
-    # Load oracle keypair
-    oracle = load_keypair(oracle_keypair_path)
+    # Load oracle keypair - use embedded oracle by default
+    if oracle_keypair_path is None:
+        oracle = get_oracle_keypair()
+    else:
+        oracle = load_keypair(oracle_keypair_path)
 
     # Derive vault PDA
     owner = Pubkey.from_string(owner_pubkey)
@@ -199,10 +267,10 @@ def submit_hours(
 
 def withdraw(
     amount_usdc: float,
-    owner_keypair_path: str,
-    admin_pubkey: str,
-    vault_token_account: str,
-    owner_token_account: str,
+    owner_keypair_path: str = None,
+    admin_pubkey: str = None,
+    vault_token_account: str = None,
+    owner_token_account: str = None,
     rpc_url: str = DEFAULT_RPC_URL
 ) -> str:
     """
@@ -210,7 +278,7 @@ def withdraw(
 
     Args:
         amount_usdc: Amount to withdraw in USDC (e.g., 150.0)
-        owner_keypair_path: Path to employee keypair file
+        owner_keypair_path: Path to employee keypair file (defaults to ~/.config/solana/id.json)
         admin_pubkey: Admin wallet address
         vault_token_account: Vault's token account address
         owner_token_account: Employee's token account address
@@ -219,7 +287,7 @@ def withdraw(
     Returns:
         Transaction signature
     """
-    # Load employee keypair
+    # Load employee keypair - default to ~/.config/solana/id.json
     owner = load_keypair(owner_keypair_path)
 
     # Derive vault PDA
