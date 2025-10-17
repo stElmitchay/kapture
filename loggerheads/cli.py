@@ -103,6 +103,35 @@ def main():
         show_welcome_and_launch()
 
 
+def start_tracking_with_config():
+    """Start tracking, but ensure user context is configured first."""
+    context = UserContext()
+
+    # Check if user has configured their work preferences
+    if not context.config.get('user_role') or not context.config.get('industry'):
+        print("\n" + "="*60)
+        print("⚙️  FIRST TIME TRACKING SETUP")
+        print("="*60)
+        print("\nBefore we start tracking, let's configure what to track.")
+        print("This helps the AI understand your work patterns.")
+        print("")
+
+        setup = input("Run configuration now? (y/n): ").strip().lower()
+
+        if setup == 'y':
+            context.setup_interactive()
+            print("\n✅ Configuration complete!")
+            print("Now starting tracker...\n")
+        else:
+            print("\n⚠️  Tracking without configuration.")
+            print("   You can configure later with: loggerheads setup")
+            print("")
+
+    # Now start tracking
+    print("🚀 Starting tracker...")
+    run_scheduled_tracker()
+
+
 def show_welcome_and_launch():
     """Welcome screen - check if configured, otherwise run onboarding."""
     config = VaultConfig()
@@ -181,12 +210,16 @@ def employer_onboarding():
         print("   loggerheads employer-setup")
         sys.exit(0)
 
-    print("\n❌ VAULT CREATION COMING SOON!")
-    print("\n🔧 For now, use the TypeScript script:")
-    print("   cd workchain-program")
-    print("   npx ts-node scripts/create-vault.ts")
-    print("\n💡 We're building a simpler Python-based flow.")
-    print("   Stay tuned!")
+    # Launch vault creation flow
+    from .vault_creation import create_vault_interactive
+    result = create_vault_interactive()
+
+    if result:
+        print("\n💡 TIP: Save your admin wallet address somewhere safe.")
+        print("   You'll use it to manage this employee's vault.")
+    else:
+        print("\n❌ Vault creation failed or was cancelled.")
+        print("   Run 'loggerheads onboard' to try again.")
 
 
 def employee_onboarding():
@@ -709,26 +742,51 @@ def show_all_config():
 
 
 def interactive_menu():
-    """Interactive menu for easier navigation."""
+    """Interactive menu with smart role detection."""
+    # Detect role based on what they've done
+    config = VaultConfig()
+
+    # Check if user has vault configured (likely employee)
+    # But give option to switch roles
+
     while True:
         print("\n" + "="*60)
         print("🔗 WorkChain - Interactive Menu")
         print("="*60)
+
+        # Show role and option to switch
+        if config.has_vault():
+            print("\n💼 Current mode: Employee")
+            print("    (Type 'switch' to access employer features)")
+        else:
+            print("\n💼 You can be an employee or employer")
 
         print("\n[1] Start tracking")
         print("[2] Submit hours")
         print("[3] Check vault status")
         print("[4] Withdraw funds")
         print("[5] Configuration")
-        print("[6] Setup vault")
-        print("[7] Exit")
+        print("[6] Setup new vault (employee)")
+        print("[7] Create new vault (employer)")
+        print("[8] Exit")
 
         try:
-            choice = input("\nChoice: ").strip()
+            choice = input("\nChoice: ").strip().lower()
+
+            if choice == "switch":
+                print("\n🔄 Role switcher:")
+                print("  [1] Employee mode")
+                print("  [2] Employer mode")
+                role_choice = input("\nChoose mode: ").strip()
+                if role_choice == "1":
+                    print("✅ Switched to employee mode")
+                elif role_choice == "2":
+                    print("✅ Switched to employer mode")
+                continue
 
             if choice == "1":
-                print("\n🚀 Starting tracker...")
-                run_scheduled_tracker()
+                # Check if user context is configured
+                start_tracking_with_config()
             elif choice == "2":
                 submit_simplified()
             elif choice == "3":
@@ -740,6 +798,9 @@ def interactive_menu():
             elif choice == "6":
                 setup_vault_interactive()
             elif choice == "7":
+                from .vault_creation import create_vault_interactive
+                create_vault_interactive()
+            elif choice == "8":
                 print("\n👋 Goodbye!")
                 break
             else:
