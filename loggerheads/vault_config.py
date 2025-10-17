@@ -93,32 +93,46 @@ class VaultConfig:
         self.config = {}
         self.save()
 
-    def print_config(self):
-        """Print current configuration."""
+    def print_config(self, show_technical=False):
+        """
+        Print current configuration.
+
+        Args:
+            show_technical: If True, show technical blockchain details (PDAs, token accounts)
+                          Default False - users don't need to see these!
+        """
         if not self.has_vault():
-            print("❌ No vault configured")
-            print("\nRun 'loggerheads setup-vault' to configure")
+            print("\n❌ No work account set up yet")
+            print("\n💡 Get started: loggerheads setup-vault")
             return
 
         vault = self.get_vault()
         print("\n" + "="*60)
-        print("📋 Current Vault Configuration")
+        print("📋 Your Work Account")
         print("="*60)
 
-        print(f"\n📥 STORED (what you entered):")
-        print(f"   👤 Employee: {vault['employee_pubkey'][:20]}...")
-        print(f"   👔 Admin:    {vault['admin_pubkey'][:20]}...")
+        # Show user-friendly info only
+        print(f"\n👤 Your Wallet:")
+        print(f"   {vault['employee_pubkey'][:16]}...{vault['employee_pubkey'][-8:]}")
 
-        print(f"\n✨ AUTO-DERIVED (calculated automatically):")
-        print(f"   🔐 Vault PDA:      {vault['vault_pda'][:20]}...")
-        print(f"   💰 Vault Token:    {vault['vault_token_account'][:20]}...")
-        print(f"   💳 Employee Token: {vault['employee_token_account'][:20]}...")
+        print(f"\n👔 Employer:")
+        print(f"   {vault['admin_pubkey'][:16]}...{vault['admin_pubkey'][-8:]}")
 
         if self.is_auto_submit_enabled():
-            print(f"\n⏰ Auto-submit: ✅ Enabled (daily at {self.get_auto_submit_time()})")
+            print(f"\n⏰ Auto-Submit: ✅ Enabled")
+            print(f"   Your hours are automatically submitted at {self.get_auto_submit_time()}")
         else:
-            print(f"\n⏰ Auto-submit: ❌ Disabled")
+            print(f"\n⏰ Auto-Submit: ❌ Disabled")
+            print(f"   Remember to run 'loggerheads submit' daily")
 
-        print("\n" + "="*60)
-        print(f"Config file: {self.config_path}")
-        print("="*60 + "\n")
+        # Only show technical details if explicitly requested (for debugging)
+        if show_technical:
+            print(f"\n" + "-"*60)
+            print(f"🔧 Technical Details (for debugging):")
+            print(f"-"*60)
+            print(f"   Vault PDA:      {vault['vault_pda'][:20]}...")
+            print(f"   Vault Token:    {vault['vault_token_account'][:20]}...")
+            print(f"   Employee Token: {vault['employee_token_account'][:20]}...")
+            print(f"   Config file:    {self.config_path}")
+
+        print("\n" + "="*60 + "\n")

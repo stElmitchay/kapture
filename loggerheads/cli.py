@@ -8,10 +8,191 @@ from .scheduler import run_scheduled_tracker
 from .user_context import UserContext
 from .autostart import install_autostart, uninstall_autostart, check_autostart_status
 from .database import calculate_hours_worked_today
-from .blockchain import submit_hours, withdraw, get_vault_info, derive_vault_pda, format_usdc
+from .blockchain import submit_hours, withdraw, get_vault_info, derive_vault_pda, format_usdc, load_keypair
 from .vault_config import VaultConfig
 from .auto_submit import auto_submit
+from .token_utils import get_token_balance, get_sol_balance
 from solders.pubkey import Pubkey
+import subprocess
+from pathlib import Path
+from datetime import datetime
+
+
+def show_tracking_status():
+    """Show current tracking status - hours, screenshots, running status."""
+    print("\n" + "="*70)
+    print("⏱️  TRACKING STATUS")
+    print("="*70)
+
+    # Check if logs exist
+    log_dir = Path.home() / ".loggerheads_logs"
+    log_file = log_dir / "loggerheads.log"
+    screenshot_dir = log_dir / "screenshots"
+    db_path = log_dir / "activity_log.db"
+
+    # Check if tracking is running
+    try:
+        result = subprocess.run(
+            ["pgrep", "-f", "loggerheads.*start"],
+            capture_output=True,
+            text=True
+        )
+        is_running = bool(result.stdout.strip())
+    except Exception:
+        is_running = False
+
+    status_icon = "🟢" if is_running else "🔴"
+    status_text = "RUNNING" if is_running else "NOT RUNNING"
+
+    print(f"\n{status_icon} Tracker: {status_text}")
+
+    # Hours worked today
+    if db_path.exists():
+        try:
+            hours = calculate_hours_worked_today()
+            print(f"⏰ Hours today: {hours:.1f} hours")
+        except Exception as e:
+            print(f"⏰ Hours today: Unable to calculate ({e})")
+    else:
+        print("⏰ Hours today: No data (database not found)")
+
+    # Screenshot count today
+    if screenshot_dir.exists():
+        today = datetime.now().strftime("%Y-%m-%d")
+        screenshots_today = list(screenshot_dir.glob(f"screenshot_{today}*"))
+        print(f"📸 Screenshots today: {len(screenshots_today)}")
+    else:
+        print("📸 Screenshots today: 0 (directory not found)")
+
+    # Log file status
+    if log_file.exists():
+        size_mb = log_file.stat().st_size / (1024 * 1024)
+        print(f"📝 Log file: {size_mb:.2f} MB")
+    else:
+        print("📝 Log file: Not found")
+
+    print("\n" + "-"*70)
+
+    if is_running:
+        print("\n💡 Commands:")
+        print("   loggerheads logs          View live logs")
+        print("   loggerheads screenshots   View recent screenshots")
+        print("   loggerheads submit        Submit hours to blockchain")
+    else:
+        print("\n💡 Start tracking:")
+        print("   loggerheads start")
+
+    print()
+
+
+def show_balance():
+    """Show wallet balances in user-friendly format."""
+    try:
+        keypair = load_keypair()
+        pubkey = keypair.pubkey()
+
+        print("\n" + "="*60)
+        print("💰 Your Balance")
+        print("="*60)
+
+        sol_balance = get_sol_balance(pubkey)
+        usdc_balance = get_token_balance(pubkey)
+
+        # Show balances in simple format
+        print(f"\n💵 Wallet: ${usdc_balance:.2f}")
+
+        # Check vault balance
+        config = VaultConfig()
+        if config.has_vault():
+            vault = config.get_vault()
+            vault_pda, _ = derive_vault_pda(
+                Pubkey.from_string(vault['employee_pubkey']),
+                Pubkey.from_string(vault['admin_pubkey'])
+            )
+            vault_info = get_vault_info(vault_pda)
+
+            if vault_info:
+                unlocked = format_usdc(vault_info['unlocked_amount'])
+                locked = format_usdc(vault_info['locked_amount'] - vault_info['unlocked_amount'])
+                total = format_usdc(vault_info['locked_amount'])
+
+                print(f"💼 Available to withdraw: ${unlocked}")
+                print(f"🔒 Still earning: ${locked}")
+                print(f"📊 Total contract: ${total}")
+
+        # Warnings (only if critical)
+        if sol_balance < 0.001:
+            print("\n⚠️  Low transaction balance!")
+            print("   Get devnet SOL: solana airdrop 2")
+
+        print()
+
+    except Exception as e:
+        print(f"\n❌ Could not load balance")
+        print(f"\n💡 Make sure you've set up your wallet:")
+        print("   loggerheads setup-vault")
+
+
+def view_logs():
+    """View logs with tail -f."""
+    log_file = Path.home() / ".loggerheads_logs" / "loggerheads.log"
+
+    if not log_file.exists():
+        print("\n❌ Log file not found")
+        print(f"   Expected: {log_file}")
+        print("\n💡 Logs are created when you start tracking:")
+        print("   loggerheads start")
+        return
+
+    print("\n📝 Viewing logs (Ctrl+C to exit)...\n")
+    print("="*70)
+
+    try:
+        subprocess.run(["tail", "-f", str(log_file)])
+    except KeyboardInterrupt:
+        print("\n\n👋 Stopped viewing logs")
+
+
+def view_screenshots():
+    """View recent screenshots."""
+    screenshot_dir = Path.home() / ".loggerheads_logs" / "screenshots"
+
+    if not screenshot_dir.exists():
+        print("\n❌ Screenshot directory not found")
+        print(f"   Expected: {screenshot_dir}")
+        return
+
+    # Get recent screenshots (last 20)
+    screenshots = sorted(screenshot_dir.glob("screenshot_*.png"), key=lambda p: p.stat().st_mtime, reverse=True)[:20]
+
+    if not screenshots:
+        print("\n📸 No screenshots found")
+        print("\n💡 Screenshots are captured when tracking is active")
+        return
+
+    print("\n" + "="*70)
+    print("📸 RECENT SCREENSHOTS")
+    print("="*70)
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    screenshots_today = [s for s in screenshots if today in s.name]
+
+    print(f"\n📊 Total today: {len(screenshots_today)}")
+    print(f"📂 Location: {screenshot_dir}")
+
+    print("\n" + "-"*70)
+    print("Last 10 screenshots:")
+    print("-"*70)
+
+    for i, screenshot in enumerate(screenshots[:10], 1):
+        size_kb = screenshot.stat().st_size / 1024
+        timestamp = datetime.fromtimestamp(screenshot.stat().st_mtime)
+        time_str = timestamp.strftime("%H:%M:%S")
+        print(f"{i:2}. {screenshot.name:40} ({size_kb:6.1f} KB) at {time_str}")
+
+    print("\n💡 Open screenshot folder:")
+    print(f"   open {screenshot_dir}")
+    print()
 
 
 def main():
@@ -51,7 +232,24 @@ def main():
             uninstall_autostart()
 
         elif command == "status":
+            # Show tracking status (hours, screenshots, etc.)
+            show_tracking_status()
+
+        elif command == "autostart-status":
+            # Renamed from "status" to avoid confusion
             check_autostart_status()
+
+        elif command == "balance":
+            # Check wallet balances
+            show_balance()
+
+        elif command == "logs":
+            # View logs
+            view_logs()
+
+        elif command == "screenshots":
+            # View recent screenshots
+            view_screenshots()
 
         elif command == "version":
             from . import __version__
@@ -483,22 +681,23 @@ def submit_simplified():
     config = VaultConfig()
 
     if not config.has_vault():
-        print("❌ No vault configured")
-        print("Run: loggerheads setup-vault")
+        print("\n❌ No work account set up")
+        print("\n💡 Get started: loggerheads setup-vault")
         sys.exit(1)
 
     vault = config.get_vault()
 
     # Calculate hours
     hours = calculate_hours_worked_today()
-    print(f"\n📊 Calculated hours worked today: {hours}")
+    print(f"\n⏰ Today's work: {hours:.1f} hours")
 
     if hours == 0:
-        print("⚠️  No work hours detected. Make sure the tracker has been running.")
+        print("\n⚠️  No work detected today")
+        print("💡 Make sure the tracker is running: loggerheads start")
         sys.exit(1)
 
     try:
-        print(f"📤 Submitting {hours} hours to blockchain...")
+        print(f"\n📤 Submitting your hours...")
         signature = submit_hours(
             hours,
             vault['employee_pubkey'],
@@ -506,9 +705,7 @@ def submit_simplified():
             None  # Uses default oracle keypair
         )
 
-        print(f"✅ Success!")
-        print(f"📝 Transaction: {signature}")
-        print(f"🔍 Explorer: https://explorer.solana.com/tx/{signature}?cluster=devnet")
+        print(f"✅ Hours submitted successfully!")
 
         # Show vault status
         vault_pda, _ = derive_vault_pda(
@@ -518,12 +715,24 @@ def submit_simplified():
         vault_info = get_vault_info(vault_pda)
 
         if vault_info:
-            print(f"\n💰 Vault Status:")
-            print(f"   Unlocked: {format_usdc(vault_info['unlocked_amount'])} USDC")
-            print(f"   Locked: {format_usdc(vault_info['locked_amount'] - vault_info['unlocked_amount'])} USDC")
+            unlocked = format_usdc(vault_info['unlocked_amount'])
+            target = vault_info['daily_target_hours']
+            daily_pay = format_usdc(vault_info['daily_unlock'])
+
+            print(f"\n💰 Your Balance:")
+            print(f"   Available to withdraw: ${unlocked}")
+
+            if hours >= target:
+                print(f"\n🎉 You hit your {target}h target! +${daily_pay} unlocked")
+            else:
+                print(f"\n⚠️  Below {target}h target today. No payment unlocked.")
+                print(f"   Keep working to earn ${daily_pay} for today!")
+
+        print(f"\n🔗 View transaction: https://explorer.solana.com/tx/{signature}?cluster=devnet")
 
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"\n❌ Could not submit hours")
+        print(f"\n💡 Error: {str(e)}")
         sys.exit(1)
 
 
@@ -570,8 +779,8 @@ def withdraw_simplified():
     config = VaultConfig()
 
     if not config.has_vault():
-        print("❌ No vault configured")
-        print("Run: loggerheads setup-vault")
+        print("\n❌ No work account set up")
+        print("\n💡 Get started: loggerheads setup-vault")
         sys.exit(1)
 
     vault = config.get_vault()
@@ -584,33 +793,35 @@ def withdraw_simplified():
     vault_info = get_vault_info(vault_pda)
 
     if not vault_info:
-        print("❌ Vault not found")
+        print("\n❌ Could not find your work contract")
+        print("\n💡 Contact your employer")
         sys.exit(1)
 
     unlocked = vault_info['unlocked_amount'] / 1_000_000
 
     if unlocked == 0:
-        print("❌ No unlocked funds available")
-        print(f"\nTotal locked: {format_usdc(vault_info['locked_amount'])} USDC")
-        print(f"Daily target: {vault_info['daily_target_hours']} hours")
-        print("\nKeep working and submit hours to unlock funds!")
+        print("\n❌ No money available yet")
+        target = vault_info['daily_target_hours']
+        daily_pay = format_usdc(vault_info['daily_unlock'])
+        print(f"\n💡 Work {target}h and submit to earn ${daily_pay}")
+        print("   Then come back here to withdraw!")
         sys.exit(1)
 
-    print(f"\n💰 Available to withdraw: {unlocked} USDC")
+    print(f"\n💰 Available: ${unlocked:.2f}")
 
     # Get amount from user or command line
     if len(sys.argv) > 2:
         amount = float(sys.argv[2])
     else:
-        amount_input = input(f"Amount to withdraw (max {unlocked}): ").strip()
+        amount_input = input(f"\nHow much to withdraw? (press Enter for all): $").strip()
         amount = float(amount_input) if amount_input else unlocked
 
     if amount > unlocked:
-        print(f"❌ Cannot withdraw {amount} USDC (only {unlocked} USDC available)")
+        print(f"\n❌ You only have ${unlocked:.2f} available")
         sys.exit(1)
 
     try:
-        print(f"\n💸 Withdrawing {amount} USDC...")
+        print(f"\n💸 Withdrawing ${amount:.2f}...")
         signature = withdraw(
             amount,
             None,  # Uses default employee keypair
@@ -619,12 +830,13 @@ def withdraw_simplified():
             vault['employee_token_account']
         )
 
-        print(f"✅ Success!")
-        print(f"📝 Transaction: {signature}")
-        print(f"🔍 Explorer: https://explorer.solana.com/tx/{signature}?cluster=devnet")
+        print(f"\n✅ Money sent to your wallet!")
+        print(f"   Check your wallet balance: loggerheads balance")
+        print(f"\n🔗 View transaction: https://explorer.solana.com/tx/{signature}?cluster=devnet")
 
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"\n❌ Withdrawal failed")
+        print(f"\n💡 Error: {str(e)}")
         sys.exit(1)
 
 
@@ -654,12 +866,12 @@ def withdraw_manual():
 
 
 def vault_info_simplified():
-    """Show vault info using stored config."""
+    """Show vault info in user-friendly format."""
     config = VaultConfig()
 
     if not config.has_vault():
-        print("❌ No vault configured")
-        print("Run: loggerheads setup-vault")
+        print("\n❌ No work account set up")
+        print("\n💡 Get started: loggerheads setup-vault")
         sys.exit(1)
 
     vault = config.get_vault()
@@ -670,25 +882,40 @@ def vault_info_simplified():
             Pubkey.from_string(vault['admin_pubkey'])
         )
 
-        print(f"\n🔐 Vault PDA: {vault_pda}")
-
         vault_info = get_vault_info(vault_pda)
 
         if vault_info:
-            print(f"\n💰 Vault Information:")
-            print(f"   Owner: {vault_info['owner']}")
-            print(f"   Admin: {vault_info['admin']}")
-            print(f"   Oracle: {vault_info['oracle']}")
-            print(f"   Total Locked: {format_usdc(vault_info['locked_amount'])} USDC")
-            print(f"   Unlocked: {format_usdc(vault_info['unlocked_amount'])} USDC")
-            print(f"   Still Locked: {format_usdc(vault_info['locked_amount'] - vault_info['unlocked_amount'])} USDC")
-            print(f"   Daily Target: {vault_info['daily_target_hours']} hours")
-            print(f"   Daily Unlock: {format_usdc(vault_info['daily_unlock'])} USDC")
+            print("\n" + "="*60)
+            print("📊 Your Work Contract")
+            print("="*60)
+
+            unlocked = format_usdc(vault_info['unlocked_amount'])
+            locked = format_usdc(vault_info['locked_amount'] - vault_info['unlocked_amount'])
+            total = format_usdc(vault_info['locked_amount'])
+            daily_unlock = format_usdc(vault_info['daily_unlock'])
+
+            print(f"\n💰 Money:")
+            print(f"   Available now: ${unlocked}")
+            print(f"   Still earning: ${locked}")
+            print(f"   Total contract: ${total}")
+
+            print(f"\n⏰ Work Requirements:")
+            print(f"   Daily target: {vault_info['daily_target_hours']} hours")
+            print(f"   You earn: ${daily_unlock} per day when you hit target")
+
+            days_remaining = int(float(locked) / float(daily_unlock)) if float(daily_unlock) > 0 else 0
+            if days_remaining > 0:
+                print(f"\n📅 {days_remaining} workdays remaining on contract")
+
+            print()
         else:
-            print("❌ Vault not found or not yet initialized")
+            print("\n❌ Could not find your work contract")
+            print("\n💡 Contact your employer to set up your account")
 
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"\n❌ Could not load contract info")
+        print(f"\n💡 Make sure your work account is set up:")
+        print("   loggerheads setup-vault")
         sys.exit(1)
 
 
@@ -746,65 +973,93 @@ def interactive_menu():
     # Detect role based on what they've done
     config = VaultConfig()
 
-    # Check if user has vault configured (likely employee)
-    # But give option to switch roles
+    # Track current mode (default based on vault config)
+    current_mode = "employee" if config.has_vault() else "employer"
 
     while True:
         print("\n" + "="*60)
         print("🔗 WorkChain - Interactive Menu")
         print("="*60)
 
-        # Show role and option to switch
-        if config.has_vault():
-            print("\n💼 Current mode: Employee")
-            print("    (Type 'switch' to access employer features)")
-        else:
-            print("\n💼 You can be an employee or employer")
+        # Show current mode and option to switch
+        mode_icon = "👤" if current_mode == "employee" else "👔"
+        mode_name = "Employee" if current_mode == "employee" else "Employer"
+        print(f"\n{mode_icon} Current mode: {mode_name}")
+        print("    (Type 'switch' to change mode)")
 
-        print("\n[1] Start tracking")
-        print("[2] Submit hours")
-        print("[3] Check vault status")
-        print("[4] Withdraw funds")
-        print("[5] Configuration")
-        print("[6] Setup new vault (employee)")
-        print("[7] Create new vault (employer)")
-        print("[8] Exit")
+        if current_mode == "employee":
+            print("\n[1] Start tracking")
+            print("[2] Submit hours")
+            print("[3] Check vault status")
+            print("[4] Withdraw funds")
+            print("[5] Check balance")
+            print("[6] View logs")
+            print("[7] Configuration")
+            print("[8] Setup vault (employee)")
+            print("[9] Exit")
+        else:
+            print("\n[1] Create vault for employee")
+            print("[2] View employer guide")
+            print("[3] Check balance")
+            print("[4] Configuration")
+            print("[5] Exit")
 
         try:
             choice = input("\nChoice: ").strip().lower()
 
             if choice == "switch":
                 print("\n🔄 Role switcher:")
-                print("  [1] Employee mode")
-                print("  [2] Employer mode")
+                print("  [1] 👤 Employee mode")
+                print("  [2] 👔 Employer mode")
                 role_choice = input("\nChoose mode: ").strip()
                 if role_choice == "1":
+                    current_mode = "employee"
                     print("✅ Switched to employee mode")
                 elif role_choice == "2":
+                    current_mode = "employer"
                     print("✅ Switched to employer mode")
+                else:
+                    print("❌ Invalid choice")
                 continue
 
-            if choice == "1":
-                # Check if user context is configured
-                start_tracking_with_config()
-            elif choice == "2":
-                submit_simplified()
-            elif choice == "3":
-                vault_info_simplified()
-            elif choice == "4":
-                withdraw_simplified()
-            elif choice == "5":
-                show_all_config()
-            elif choice == "6":
-                setup_vault_interactive()
-            elif choice == "7":
-                from .vault_creation import create_vault_interactive
-                create_vault_interactive()
-            elif choice == "8":
-                print("\n👋 Goodbye!")
-                break
-            else:
-                print("❌ Invalid choice")
+            # Handle choices based on mode
+            if current_mode == "employee":
+                if choice == "1":
+                    start_tracking_with_config()
+                elif choice == "2":
+                    submit_simplified()
+                elif choice == "3":
+                    vault_info_simplified()
+                elif choice == "4":
+                    withdraw_simplified()
+                elif choice == "5":
+                    show_balance()
+                elif choice == "6":
+                    view_logs()
+                elif choice == "7":
+                    show_all_config()
+                elif choice == "8":
+                    setup_vault_interactive()
+                elif choice == "9":
+                    print("\n👋 Goodbye!")
+                    break
+                else:
+                    print("❌ Invalid choice")
+            else:  # employer mode
+                if choice == "1":
+                    from .vault_creation import create_vault_interactive
+                    create_vault_interactive()
+                elif choice == "2":
+                    show_employer_setup()
+                elif choice == "3":
+                    show_balance()
+                elif choice == "4":
+                    show_all_config()
+                elif choice == "5":
+                    print("\n👋 Goodbye!")
+                    break
+                else:
+                    print("❌ Invalid choice")
 
         except KeyboardInterrupt:
             print("\n\n👋 Goodbye!")
@@ -833,9 +1088,11 @@ def print_help():
 
     loggerheads              Start here! (interactive setup)
     loggerheads start        Start tracking work
+    loggerheads status       Check tracking status
+    loggerheads balance      Check SOL/USDC balances
     loggerheads submit       Submit hours to blockchain
     loggerheads withdraw     Withdraw earned USDC
-    loggerheads vault-info   Check your balance
+    loggerheads vault-info   Check your vault balance
 
 ═══════════════════════════════════════════════════════════
 
@@ -850,6 +1107,8 @@ def print_help():
 
 🔧 OTHER COMMANDS:
 
+    loggerheads logs         View live logs
+    loggerheads screenshots  View recent screenshots
     loggerheads install      Enable auto-start on boot
     loggerheads menu         Interactive menu
     loggerheads config       View configuration
