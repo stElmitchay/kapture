@@ -379,17 +379,3 @@ loggerheads setup-vault        # Connect to vault (employee)
 - [ ] Multiple vaults per employee
 
 ---
-
-## 📝 License
-
-MIT License - See LICENSE file
-
----
-
-## 🤝 Contributing
-
-Contributions welcome! Open issues or PRs on GitHub.
-
----
-
-**Built for the Solana ecosystem - Transparent, fair, blockchain-guaranteed payments for remote work.**
