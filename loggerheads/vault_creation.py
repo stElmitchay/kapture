@@ -18,12 +18,15 @@ from .blockchain import (
     load_keypair,
     derive_vault_pda,
     get_associated_token_address,
+    ensure_token_accounts_exist,
     PROGRAM_ID,
     TOKEN_PROGRAM_ID,
     USDC_MINT,
     DEFAULT_RPC_URL
 )
 from .oracle import get_oracle_keypair
+from .idl_utils import get_discriminator
+from .token_utils import check_vault_funding_requirements
 
 
 def create_vault_interactive():
@@ -106,6 +109,42 @@ def create_vault_interactive():
         daily_unlock = float(unlock_str)
     except:
         print("\n❌ Invalid amount!")
+        return None
+
+    # Check balances before confirming
+    print("\n" + "="*70)
+    print("💰 CHECKING BALANCES")
+    print("="*70)
+
+    funding_check = check_vault_funding_requirements(admin_keypair.pubkey(), locked_amount)
+
+    print(f"\n  Your USDC Balance: {funding_check['usdc_balance']:.2f} USDC")
+    print(f"  Your SOL Balance:  {funding_check['sol_balance']:.4f} SOL")
+    print(f"  Required USDC:     {locked_amount:.2f} USDC")
+
+    if not funding_check['ready']:
+        print("\n" + "="*70)
+        print("⚠️  INSUFFICIENT FUNDS")
+        print("="*70)
+
+        if not funding_check['sol_sufficient']:
+            print(f"\n  ❌ Not enough SOL for transaction fees")
+            print(f"     You have: {funding_check['sol_balance']:.4f} SOL")
+            print(f"     You need: ~0.01 SOL")
+            print("\n  Get devnet SOL:")
+            print("     solana airdrop 2")
+
+        if not funding_check['can_fund_vault']:
+            print(f"\n  ❌ Not enough USDC to lock in vault")
+            print(f"     You have: {funding_check['usdc_balance']:.2f} USDC")
+            print(f"     You need: {locked_amount:.2f} USDC")
+            print(f"     Missing: {funding_check['usdc_needed']:.2f} USDC")
+            print("\n  Get devnet USDC:")
+            print(f"     Visit: https://spl-token-faucet.com/?token-name=USDC-Dev")
+            print(f"     Or use: spl-token mint {USDC_MINT} {locked_amount}")
+            print(f"     (if you control the mint authority)")
+
+        print("\n" + "="*70)
         return None
 
     # Confirmation
@@ -199,9 +238,20 @@ def create_vault_on_chain(
     print(f"   ✓ Vault token: {vault_token_account}")
     print(f"   ✓ Employee token: {employee_token_account}")
 
-    print("\n3️⃣  Creating token accounts if needed...")
-    # Note: In production, these might already exist
-    # For now we assume they exist or will be created by the program
+    print("\n3️⃣  Checking token accounts...")
+    # Check which token accounts need to be created
+    accounts_to_check = [
+        (admin_keypair.pubkey(), admin_token_account),
+        (vault_pda, vault_token_account),
+        (employee_pubkey, employee_token_account),
+    ]
+
+    create_ata_instructions = ensure_token_accounts_exist(
+        accounts_to_check,
+        admin_keypair,
+        client,
+        USDC_MINT
+    )
 
     print("\n4️⃣  Building initialize_vault instruction...")
 
@@ -209,9 +259,14 @@ def create_vault_on_chain(
     locked_lamports = int(locked_amount * 1_000_000)
     unlock_lamports = int(daily_unlock * 1_000_000)
 
-    # Instruction discriminator for initialize_vault
-    # sha256("global:initialize_vault")[:8]
-    discriminator = bytes([175, 175, 109, 31, 13, 152, 155, 237])
+    # Instruction discriminator for initialize_vault - loaded from IDL
+    try:
+        discriminator = get_discriminator('initialize_vault')
+        print(f"   ✓ Loaded discriminator from IDL: {list(discriminator)}")
+    except Exception as e:
+        print(f"   ⚠️  Could not load discriminator from IDL: {e}")
+        print(f"   ℹ️  Using hardcoded discriminator")
+        discriminator = bytes([48, 191, 163, 44, 71, 129, 63, 164])
 
     # Instruction data: discriminator + locked_amount (u64) + daily_target_hours (u8) + daily_unlock (u64)
     data = discriminator + struct.pack('<Q', locked_lamports) + struct.pack('<B', daily_target_hours) + struct.pack('<Q', unlock_lamports)
@@ -228,7 +283,7 @@ def create_vault_on_chain(
         AccountMeta(pubkey=SYS_PROGRAM_ID, is_signer=False, is_writable=False),
     ]
 
-    instruction = Instruction(
+    vault_instruction = Instruction(
         program_id=PROGRAM_ID,
         accounts=accounts,
         data=data
@@ -240,8 +295,14 @@ def create_vault_on_chain(
     blockhash_resp = client.get_latest_blockhash(Confirmed)
     recent_blockhash = blockhash_resp.value.blockhash
 
+    # Combine all instructions: create token accounts first, then initialize vault
+    all_instructions = create_ata_instructions + [vault_instruction]
+
+    if create_ata_instructions:
+        print(f"   ℹ️  Transaction will create {len(create_ata_instructions)} token account(s)")
+
     # Create and sign transaction
-    message = Message.new_with_blockhash([instruction], admin_keypair.pubkey(), recent_blockhash)
+    message = Message.new_with_blockhash(all_instructions, admin_keypair.pubkey(), recent_blockhash)
     transaction = Transaction([admin_keypair], message, recent_blockhash)
 
     # Send transaction

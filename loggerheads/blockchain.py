@@ -17,6 +17,7 @@ from solana.rpc.commitment import Confirmed
 from solana.rpc.types import TxOpts
 import struct
 from .oracle import get_oracle_keypair
+from .idl_utils import get_discriminator
 
 
 # Program ID (deployed on devnet)
@@ -94,6 +95,90 @@ def get_associated_token_address(wallet: Pubkey, mint: Pubkey = USDC_MINT) -> Pu
 
     ata, _ = Pubkey.find_program_address(seeds, ASSOCIATED_TOKEN_PROGRAM_ID)
     return ata
+
+
+def check_token_account_exists(token_account: Pubkey, client: Client) -> bool:
+    """
+    Check if a token account exists on-chain.
+
+    Args:
+        token_account: Token account address to check
+        client: Solana RPC client
+
+    Returns:
+        True if account exists, False otherwise
+    """
+    try:
+        response = client.get_account_info(token_account, commitment=Confirmed)
+        return response.value is not None
+    except Exception:
+        return False
+
+
+def create_associated_token_account_instruction(
+    payer: Pubkey,
+    owner: Pubkey,
+    mint: Pubkey = USDC_MINT
+) -> Instruction:
+    """
+    Create instruction to initialize an Associated Token Account.
+
+    Args:
+        payer: Account that will pay for the token account creation
+        owner: Owner of the token account
+        mint: Token mint (defaults to USDC)
+
+    Returns:
+        Instruction to create the ATA
+    """
+    ata = get_associated_token_address(owner, mint)
+
+    # CreateAssociatedTokenAccount instruction has no data
+    accounts = [
+        AccountMeta(pubkey=payer, is_signer=True, is_writable=True),
+        AccountMeta(pubkey=ata, is_signer=False, is_writable=True),
+        AccountMeta(pubkey=owner, is_signer=False, is_writable=False),
+        AccountMeta(pubkey=mint, is_signer=False, is_writable=False),
+        AccountMeta(pubkey=SYS_PROGRAM_ID, is_signer=False, is_writable=False),
+        AccountMeta(pubkey=TOKEN_PROGRAM_ID, is_signer=False, is_writable=False),
+    ]
+
+    return Instruction(
+        program_id=ASSOCIATED_TOKEN_PROGRAM_ID,
+        accounts=accounts,
+        data=bytes()  # No instruction data needed
+    )
+
+
+def ensure_token_accounts_exist(
+    accounts_to_check: list[tuple[Pubkey, Pubkey]],
+    payer: Keypair,
+    client: Client,
+    mint: Pubkey = USDC_MINT
+) -> list[Instruction]:
+    """
+    Check if token accounts exist and return instructions to create missing ones.
+
+    Args:
+        accounts_to_check: List of (owner, token_account) tuples to check
+        payer: Keypair that will pay for account creation
+        client: Solana RPC client
+        mint: Token mint (defaults to USDC)
+
+    Returns:
+        List of instructions to create missing token accounts (empty if all exist)
+    """
+    instructions = []
+
+    for owner, token_account in accounts_to_check:
+        if not check_token_account_exists(token_account, client):
+            print(f"   ℹ️  Token account {token_account} doesn't exist, will create it")
+            instruction = create_associated_token_account_instruction(payer.pubkey(), owner, mint)
+            instructions.append(instruction)
+        else:
+            print(f"   ✓ Token account {token_account} exists")
+
+    return instructions
 
 
 def derive_all_vault_addresses(employee_pubkey: str, admin_pubkey: str) -> dict:
@@ -222,9 +307,12 @@ def submit_hours(
     admin = Pubkey.from_string(admin_pubkey)
     vault_pda, _ = derive_vault_pda(owner, admin)
 
-    # Instruction discriminator for submit_hours
-    # sha256("global:submit_hours")[:8]
-    discriminator = bytes([135, 190, 70, 235, 234, 220, 207, 48])
+    # Instruction discriminator for submit_hours - loaded from IDL
+    try:
+        discriminator = get_discriminator('submit_hours')
+    except Exception:
+        # Fallback to hardcoded discriminator
+        discriminator = bytes([135, 190, 70, 235, 234, 220, 207, 48])
 
     # Instruction data: discriminator + hours_worked (u8)
     data = discriminator + struct.pack('<B', hours_worked)
@@ -297,9 +385,12 @@ def withdraw(
     # Convert USDC to lamports (6 decimals)
     amount_lamports = int(amount_usdc * 1_000_000)
 
-    # Instruction discriminator for withdraw
-    # sha256("global:withdraw")[:8]
-    discriminator = bytes([183, 18, 70, 156, 148, 109, 161, 34])
+    # Instruction discriminator for withdraw - loaded from IDL
+    try:
+        discriminator = get_discriminator('withdraw')
+    except Exception:
+        # Fallback to hardcoded discriminator
+        discriminator = bytes([183, 18, 70, 156, 148, 109, 161, 34])
 
     # Instruction data: discriminator + amount (u64)
     data = discriminator + struct.pack('<Q', amount_lamports)
