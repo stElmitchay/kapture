@@ -1,9 +1,20 @@
 import sqlite3
+import os
+from pathlib import Path
 from datetime import datetime, timedelta
 
 
-def init_db():
-    conn = sqlite3.connect("activity_log.db")
+def get_db_path():
+    """Get the absolute path to the database file in ~/.loggerheads_logs/"""
+    log_dir = Path.home() / ".loggerheads_logs"
+    log_dir.mkdir(exist_ok=True)
+    return str(log_dir / "activity_log.db")
+
+
+def init_db(db_path=None):
+    if db_path is None:
+        db_path = get_db_path()
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     # Create logs table
@@ -32,7 +43,8 @@ def init_db():
 
 
 def save_logs(logs):
-    conn = sqlite3.connect("activity_log.db")
+    db_path = get_db_path()
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.executemany("INSERT INTO logs (window_name) VALUES (?)", [(log,) for log in logs])
     conn.commit()
@@ -48,7 +60,8 @@ def save_screenshot(file_path, extracted_text="", log_id=None):
         extracted_text (str): OCR-extracted text from the screenshot
         log_id (int, optional): ID of related activity log entry
     """
-    conn = sqlite3.connect("activity_log.db")
+    db_path = get_db_path()
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute(
         "INSERT INTO screenshots (file_path, extracted_text, log_id) VALUES (?, ?, ?)",
@@ -68,7 +81,8 @@ def get_screenshots(limit=None):
     Returns:
         list: List of tuples containing screenshot data
     """
-    conn = sqlite3.connect("activity_log.db")
+    db_path = get_db_path()
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     if limit:
@@ -86,7 +100,7 @@ def get_screenshots(limit=None):
     return results
 
 
-def calculate_hours_worked_today(db_path="activity_log.db"):
+def calculate_hours_worked_today(db_path=None):
     """
     Calculate total hours worked today based on screenshot timestamps.
     Assumes screenshots are taken at regular intervals during active work.
@@ -94,19 +108,17 @@ def calculate_hours_worked_today(db_path="activity_log.db"):
     Returns:
         int: Number of hours worked (rounded)
     """
+    if db_path is None:
+        db_path = get_db_path()
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    # Get today's date range
-    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    today_end = today_start + timedelta(days=1)
-
-    # Get all screenshots from today
+    # Get all screenshots from today using DATE comparison (works with any timestamp format)
     cursor.execute("""
         SELECT timestamp FROM screenshots
-        WHERE timestamp >= ? AND timestamp < ?
+        WHERE DATE(timestamp) = DATE('now')
         ORDER BY timestamp ASC
-    """, (today_start.isoformat(), today_end.isoformat()))
+    """)
 
     timestamps = cursor.fetchall()
     conn.close()
@@ -121,5 +133,5 @@ def calculate_hours_worked_today(db_path="activity_log.db"):
     time_span = times[-1] - times[0]
     hours_worked = time_span.total_seconds() / 3600
 
-    # Round to nearest hour
-    return int(round(hours_worked))
+    # Return actual hours (round to 1 decimal place for readability)
+    return round(hours_worked, 1)

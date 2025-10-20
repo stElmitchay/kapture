@@ -29,6 +29,19 @@ def auto_submit():
 
     vault = config.get_vault()
 
+    # Warn if employer is auto-submitting
+    try:
+        from .blockchain import load_keypair
+        keypair = load_keypair()
+        my_wallet = str(keypair.pubkey())
+
+        if my_wallet == vault['admin_pubkey'] and my_wallet != vault['employee_pubkey']:
+            print(f"\n⚠️  EMPLOYER MODE: Submitting on behalf of employee")
+            print(f"   Employee: {vault['employee_pubkey'][:16]}...{vault['employee_pubkey'][-8:]}")
+            print()
+    except:
+        pass
+
     # Calculate hours worked today
     hours = calculate_hours_worked_today()
 
@@ -39,12 +52,17 @@ def auto_submit():
         print("   (This is normal for weekends or days off)")
         return
 
+    # Round hours for blockchain submission (blockchain expects integer)
+    hours_rounded = int(round(hours))
+
+    print(f"   Submitting as: {hours_rounded} hours (blockchain requires whole numbers)")
+
     # Submit to blockchain
     try:
-        print(f"\n📤 Submitting {hours} hours to blockchain...")
+        print(f"\n📤 Submitting {hours_rounded} hours to blockchain...")
 
         signature = submit_hours(
-            hours,
+            hours_rounded,
             vault['employee_pubkey'],
             vault['admin_pubkey'],
             None  # Uses default oracle keypair

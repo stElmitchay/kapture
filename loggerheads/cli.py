@@ -90,6 +90,7 @@ def show_balance():
     try:
         keypair = load_keypair()
         pubkey = keypair.pubkey()
+        my_wallet = str(pubkey)
 
         print("\n" + "="*60)
         print("💰 Your Balance")
@@ -99,9 +100,9 @@ def show_balance():
         usdc_balance = get_token_balance(pubkey)
 
         # Show balances in simple format
-        print(f"\n💵 Wallet: ${usdc_balance:.2f}")
+        print(f"\n💵 Your Wallet: ${usdc_balance:.2f}")
 
-        # Check vault balance
+        # Check vault balance and determine role
         config = VaultConfig()
         if config.has_vault():
             vault = config.get_vault()
@@ -116,9 +117,28 @@ def show_balance():
                 locked = format_usdc(vault_info['locked_amount'] - vault_info['unlocked_amount'])
                 total = format_usdc(vault_info['locked_amount'])
 
-                print(f"💼 Available to withdraw: ${unlocked}")
-                print(f"🔒 Still earning: ${locked}")
-                print(f"📊 Total contract: ${total}")
+                # Determine if user is employee or employer
+                is_employee = (my_wallet == vault['employee_pubkey'])
+                is_employer = (my_wallet == vault['admin_pubkey'])
+
+                if is_employee:
+                    # Employee view - show what they can withdraw
+                    print(f"\n📊 Your Work Contract:")
+                    print(f"💼 Available to withdraw: ${unlocked}")
+                    print(f"🔒 Still earning: ${locked}")
+                    print(f"📋 Total contract: ${total}")
+                elif is_employer:
+                    # Employer view - show what you've funded and employee has earned
+                    print(f"\n📊 Employee Vault Status:")
+                    print(f"💰 Total funded: ${total}")
+                    print(f"✅ Employee earned: ${unlocked}")
+                    print(f"🔒 Remaining: ${locked}")
+                    print(f"\n👤 Employee: {vault['employee_pubkey'][:16]}...{vault['employee_pubkey'][-8:]}")
+                else:
+                    # Viewing someone else's vault
+                    print(f"\n📊 Vault Info (viewing only):")
+                    print(f"💼 Unlocked: ${unlocked}")
+                    print(f"🔒 Locked: ${locked}")
 
         # Warnings (only if critical)
         if sol_balance < 0.001:
@@ -303,6 +323,33 @@ def main():
 
 def start_tracking_with_config():
     """Start tracking, but ensure user context is configured first."""
+    # Check role before starting tracker
+    vault_config = VaultConfig()
+    if vault_config.has_vault():
+        try:
+            keypair = load_keypair()
+            my_wallet = str(keypair.pubkey())
+            vault = vault_config.get_vault()
+
+            if my_wallet == vault['admin_pubkey'] and my_wallet != vault['employee_pubkey']:
+                print("\n" + "="*60)
+                print("⚠️  EMPLOYER DETECTED")
+                print("="*60)
+                print("\nYou are the EMPLOYER in this vault.")
+                print(f"Employee: {vault['employee_pubkey'][:16]}...{vault['employee_pubkey'][-8:]}")
+                print()
+                print("⚠️  IMPORTANT:")
+                print("   • In production, the EMPLOYEE should run tracking")
+                print("   • If you're testing, this will track YOUR work")
+                print("   • Hours will be submitted to the employee's vault")
+                print()
+                proceed = input("Continue tracking as employer? (y/n): ").strip().lower()
+                if proceed != 'y':
+                    print("\n👋 Tracking cancelled")
+                    return
+        except:
+            pass
+
     context = UserContext()
 
     # Check if user has configured their work preferences
@@ -687,6 +734,24 @@ def submit_simplified():
 
     vault = config.get_vault()
 
+    # Warn if employer is submitting
+    try:
+        keypair = load_keypair()
+        my_wallet = str(keypair.pubkey())
+
+        if my_wallet == vault['admin_pubkey'] and my_wallet != vault['employee_pubkey']:
+            print("\n" + "="*60)
+            print("⚠️  EMPLOYER SUBMITTING FOR EMPLOYEE")
+            print("="*60)
+            print(f"\nYou are the EMPLOYER")
+            print(f"Employee: {vault['employee_pubkey'][:16]}...{vault['employee_pubkey'][-8:]}")
+            print()
+            print("This will submit hours ON BEHALF OF the employee.")
+            print("(OK for testing, but in production the employee should submit)")
+            print()
+    except:
+        pass
+
     # Calculate hours
     hours = calculate_hours_worked_today()
     print(f"\n⏰ Today's work: {hours:.1f} hours")
@@ -696,10 +761,14 @@ def submit_simplified():
         print("💡 Make sure the tracker is running: loggerheads start")
         sys.exit(1)
 
+    # Round hours for blockchain submission (blockchain expects integer)
+    hours_rounded = int(round(hours))
+    print(f"   Submitting as: {hours_rounded} hours (blockchain requires whole numbers)")
+
     try:
-        print(f"\n📤 Submitting your hours...")
+        print(f"\n📤 Submitting {hours_rounded} hours...")
         signature = submit_hours(
-            hours,
+            hours_rounded,
             vault['employee_pubkey'],
             vault['admin_pubkey'],
             None  # Uses default oracle keypair
@@ -970,24 +1039,37 @@ def show_all_config():
 
 def interactive_menu():
     """Interactive menu with smart role detection."""
-    # Detect role based on what they've done
+    # Detect ACTUAL role based on wallet address
     config = VaultConfig()
 
-    # Track current mode (default based on vault config)
-    current_mode = "employee" if config.has_vault() else "employer"
+    # Determine user's actual role by comparing wallet addresses
+    user_role = "unknown"
+    if config.has_vault():
+        try:
+            keypair = load_keypair()
+            my_wallet = str(keypair.pubkey())
+            vault = config.get_vault()
+
+            if my_wallet == vault['employee_pubkey']:
+                user_role = "employee"
+            elif my_wallet == vault['admin_pubkey']:
+                user_role = "employer"
+        except:
+            user_role = "employee"  # Default fallback
+    else:
+        user_role = "employer"  # No vault = probably setting up as employer
 
     while True:
         print("\n" + "="*60)
         print("🔗 WorkChain - Interactive Menu")
         print("="*60)
 
-        # Show current mode and option to switch
-        mode_icon = "👤" if current_mode == "employee" else "👔"
-        mode_name = "Employee" if current_mode == "employee" else "Employer"
-        print(f"\n{mode_icon} Current mode: {mode_name}")
-        print("    (Type 'switch' to change mode)")
+        # Show ACTUAL role (not switchable)
+        mode_icon = "👤" if user_role == "employee" else "👔"
+        mode_name = "Employee" if user_role == "employee" else "Employer"
+        print(f"\n{mode_icon} Your role: {mode_name}")
 
-        if current_mode == "employee":
+        if user_role == "employee":
             print("\n[1] Start tracking")
             print("[2] Submit hours")
             print("[3] Check vault status")
@@ -1007,23 +1089,8 @@ def interactive_menu():
         try:
             choice = input("\nChoice: ").strip().lower()
 
-            if choice == "switch":
-                print("\n🔄 Role switcher:")
-                print("  [1] 👤 Employee mode")
-                print("  [2] 👔 Employer mode")
-                role_choice = input("\nChoose mode: ").strip()
-                if role_choice == "1":
-                    current_mode = "employee"
-                    print("✅ Switched to employee mode")
-                elif role_choice == "2":
-                    current_mode = "employer"
-                    print("✅ Switched to employer mode")
-                else:
-                    print("❌ Invalid choice")
-                continue
-
-            # Handle choices based on mode
-            if current_mode == "employee":
+            # Handle choices based on ACTUAL role
+            if user_role == "employee":
                 if choice == "1":
                     start_tracking_with_config()
                 elif choice == "2":
@@ -1045,7 +1112,7 @@ def interactive_menu():
                     break
                 else:
                     print("❌ Invalid choice")
-            else:  # employer mode
+            elif user_role == "employer":
                 if choice == "1":
                     from .vault_creation import create_vault_interactive
                     create_vault_interactive()
@@ -1060,6 +1127,11 @@ def interactive_menu():
                     break
                 else:
                     print("❌ Invalid choice")
+            else:
+                # Unknown role
+                print("❌ Could not determine your role")
+                print("💡 Run: loggerheads setup-vault")
+                break
 
         except KeyboardInterrupt:
             print("\n\n👋 Goodbye!")

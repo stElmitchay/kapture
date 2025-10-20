@@ -107,16 +107,41 @@ class VaultConfig:
             return
 
         vault = self.get_vault()
+
+        # Detect user's actual role
+        try:
+            from .blockchain import load_keypair
+            my_wallet = str(load_keypair().pubkey())
+            is_employee = (my_wallet == vault['employee_pubkey'])
+            is_employer = (my_wallet == vault['admin_pubkey'])
+        except:
+            is_employee = False
+            is_employer = False
+
         print("\n" + "="*60)
-        print("📋 Your Work Account")
+        print("📋 Vault Configuration")
         print("="*60)
 
-        # Show user-friendly info only
-        print(f"\n👤 Your Wallet:")
-        print(f"   {vault['employee_pubkey'][:16]}...{vault['employee_pubkey'][-8:]}")
+        # Show your role prominently
+        if is_employee and is_employer:
+            print(f"\n🔑 Your Role: Employee & Employer (same wallet)")
+        elif is_employee:
+            print(f"\n🔑 Your Role: EMPLOYEE")
+        elif is_employer:
+            print(f"\n🔑 Your Role: EMPLOYER")
+        else:
+            print(f"\n🔑 Your Role: Viewer (not in this vault)")
 
-        print(f"\n👔 Employer:")
+        # Show vault participants
+        print(f"\n👤 Employee Wallet:")
+        print(f"   {vault['employee_pubkey'][:16]}...{vault['employee_pubkey'][-8:]}")
+        if is_employee:
+            print(f"   ✓ This is you")
+
+        print(f"\n👔 Employer Wallet:")
         print(f"   {vault['admin_pubkey'][:16]}...{vault['admin_pubkey'][-8:]}")
+        if is_employer and not is_employee:
+            print(f"   ✓ This is you")
 
         if self.is_auto_submit_enabled():
             print(f"\n⏰ Auto-Submit: ✅ Enabled")

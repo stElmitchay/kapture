@@ -60,3 +60,7 @@ Thumbs.db
 *.tmp
 *.bak
 
+# Deployment packages
+loggerheads_employee_package/
+loggerheads_employee_package.tar.gz
+

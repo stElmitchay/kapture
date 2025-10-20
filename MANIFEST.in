@@ -1,3 +1,5 @@
 include README.md
-include requirements.txt
-include daily_tracker/config.py
+include LICENSE
+recursive-include docs *.md
+recursive-include loggerheads *.json
+recursive-include loggerheads *.idl

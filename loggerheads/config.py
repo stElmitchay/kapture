@@ -3,6 +3,7 @@ Configuration settings for the activity tracker.
 """
 
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -10,7 +11,10 @@ load_dotenv()
 
 # Screenshot settings
 SCREENSHOT_INTERVAL = 10  # seconds between screenshots
-SCREENSHOT_DIR = "./screenshots/"  # directory to store screenshots
+# Use centralized directory in user's home folder
+_LOG_DIR = Path.home() / ".loggerheads_logs"
+_LOG_DIR.mkdir(exist_ok=True)
+SCREENSHOT_DIR = str(_LOG_DIR / "screenshots")
 AUTO_CLEANUP_DAYS = 1  # delete screenshots older than X days (0 = no auto-cleanup)
 
 # Activity tracking settings

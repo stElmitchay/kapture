@@ -17,13 +17,12 @@ from rich.live import Live
 from rich.layout import Layout
 from rich import box
 from rich.text import Text
-from .activity_tracker import track_activity
 from .database import init_db, save_logs, save_screenshot, get_screenshots
-from .summarizer import summarize_logs
 from .screen_recorder import capture_screenshot
 from .ocr_processor import extract_text_from_image
 from .text_analyzer import analyze_text, generate_structured_summary, format_summary_for_display
 from .ai_summarizer import summarize_work_with_ai, format_ai_summary_for_display
+from .app_based_analyzer import generate_app_based_summary, format_app_summary_for_display
 from .discord_notifier import send_summary_to_discord
 from .database_cleanup import clear_all_database_data
 from .config import (
@@ -155,37 +154,37 @@ def process_and_generate_summary():
 
             progress.advance(task)
 
-    # Generate summary
+    # Generate summary using app-based detection (more reliable than keyword extraction)
     if all_ocr_texts:
-        # Check if today is Friday (4 = Friday in weekday())
-        is_friday = datetime.now().weekday() == 4
+        console.print(f"\n[bold cyan]📱 Analyzing {len(all_ocr_texts)} screenshots with app-based detection...[/bold cyan]")
 
-        # Use AI summarization if enabled
-        if USE_AI_SUMMARIZATION:
-            console.print(f"\n[bold magenta]🤖 Using Ollama AI to analyze {len(all_ocr_texts)} screenshots...[/bold magenta]")
+        # Prepare data for app-based analyzer
+        screenshots_data = []
+        for i, (screenshot_id, file_path, timestamp, extracted_text) in enumerate(screenshots):
+            if extracted_text and extracted_text.strip():
+                screenshots_data.append({
+                    'ocr_text': extracted_text,
+                    'timestamp': timestamp
+                })
+
+        # Generate app-based summary
+        app_summary = generate_app_based_summary(screenshots_data)
+        formatted_summary = format_app_summary_for_display(app_summary)
+
+        # If app-based summary found very little work, try AI as enhancement
+        if USE_AI_SUMMARIZATION and app_summary.get('work_screenshots', 0) > 10:
+            console.print(f"\n[bold magenta]🤖 Enhancing with AI analysis...[/bold magenta]")
+            is_friday = datetime.now().weekday() == 4
+
             with console.status("[bold green]Analyzing with AI...", spinner="dots"):
                 ai_summary = summarize_work_with_ai(all_ocr_texts, OLLAMA_API_URL, OLLAMA_MODEL, is_friday)
 
-            if ai_summary:
+            if ai_summary and ai_summary.get('tasks_worked_on'):
+                # Merge AI insights with app-based summary
+                console.print("[bold green]✅ AI enhancement complete - using combined analysis[/bold green]")
                 formatted_summary = format_ai_summary_for_display(ai_summary)
             else:
-                console.print("[yellow]⚠️  AI summarization failed, falling back to keyword extraction[/yellow]")
-                # Fallback to keyword extraction
-                screenshot_data = []
-                for text in all_ocr_texts:
-                    analysis = analyze_text(text)
-                    screenshot_data.append({'analysis': analysis, 'timestamp': datetime.now()})
-                summary = generate_structured_summary(screenshot_data, is_friday=is_friday)
-                formatted_summary = format_summary_for_display(summary)
-        else:
-            # Use keyword extraction
-            console.print(f"\n[bold blue]🔍 Using keyword extraction to analyze {len(all_ocr_texts)} screenshots...[/bold blue]")
-            screenshot_data = []
-            for text in all_ocr_texts:
-                analysis = analyze_text(text)
-                screenshot_data.append({'analysis': analysis, 'timestamp': datetime.now()})
-            summary = generate_structured_summary(screenshot_data, is_friday=is_friday)
-            formatted_summary = format_summary_for_display(summary)
+                console.print("[yellow]⚠️  AI enhancement not helpful, using app-based summary[/yellow]")
 
         # Print to console with rich panel
         console.print()

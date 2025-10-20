@@ -4,6 +4,7 @@ Database cleanup utilities - deletes all data after summary generation.
 
 import sqlite3
 import os
+from .database import get_db_path
 
 
 def clear_all_database_data():
@@ -12,7 +13,8 @@ def clear_all_database_data():
     Called after summary is generated and sent.
     """
     try:
-        conn = sqlite3.connect("activity_log.db")
+        db_path = get_db_path()
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
         # Delete all screenshots
@@ -37,7 +39,7 @@ def delete_database_file():
     Completely delete the database file.
     Use this for complete reset.
     """
-    db_path = "activity_log.db"
+    db_path = get_db_path()
 
     if os.path.exists(db_path):
         try:
