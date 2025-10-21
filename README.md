@@ -15,9 +15,23 @@ Everything is menu-driven with simple yes/no questions.
 
 ## Installation
 
+### Option 1: From PyPI (Recommended)
+
 ```bash
 pip install loggerheads
 ```
+
+### Option 2: From Source (For Companies)
+
+For tech teams deploying in a company:
+
+```bash
+git clone https://github.com/stElmitchay/loggerheads
+cd loggerheads
+pip3 install -e .
+```
+
+**See [Install From Source Guide](docs/INSTALL_FROM_SOURCE.md)** for complete employer + employee setup.
 
 **Requirements:**
 - Python 3.8+
@@ -115,6 +129,9 @@ The test script creates test wallets, generates fake work data, and walks you th
 ---
 
 ## Documentation
+
+**Installation:**
+- [Install From Source](docs/INSTALL_FROM_SOURCE.md) - For tech teams deploying in companies
 
 **Setup Guides:**
 - [Employee Quick Start](docs/QUICK_START_EMPLOYEE.md) - 10-minute setup

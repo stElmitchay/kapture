@@ -167,24 +167,27 @@ def process_and_generate_summary():
                     'timestamp': timestamp
                 })
 
-        # Generate app-based summary
-        app_summary = generate_app_based_summary(screenshots_data)
-        formatted_summary = format_app_summary_for_display(app_summary)
+        # Try AI summarization first if enabled
+        formatted_summary = None
 
-        # If app-based summary found very little work, try AI as enhancement
-        if USE_AI_SUMMARIZATION and app_summary.get('work_screenshots', 0) > 10:
-            console.print(f"\n[bold magenta]🤖 Enhancing with AI analysis...[/bold magenta]")
+        if USE_AI_SUMMARIZATION:
+            console.print(f"\n[bold magenta]🤖 Generating AI-powered narrative summary...[/bold magenta]")
             is_friday = datetime.now().weekday() == 4
 
             with console.status("[bold green]Analyzing with AI...", spinner="dots"):
                 ai_summary = summarize_work_with_ai(all_ocr_texts, OLLAMA_API_URL, OLLAMA_MODEL, is_friday)
 
             if ai_summary and ai_summary.get('tasks_worked_on'):
-                # Merge AI insights with app-based summary
-                console.print("[bold green]✅ AI enhancement complete - using combined analysis[/bold green]")
+                console.print("[bold green]✅ AI summary generated successfully[/bold green]")
                 formatted_summary = format_ai_summary_for_display(ai_summary)
             else:
-                console.print("[yellow]⚠️  AI enhancement not helpful, using app-based summary[/yellow]")
+                console.print("[yellow]⚠️  AI summarization failed, falling back to app-based analysis[/yellow]")
+
+        # Fall back to app-based summary if AI is disabled or failed
+        if not formatted_summary:
+            console.print(f"\n[bold cyan]📱 Generating app-based summary...[/bold cyan]")
+            app_summary = generate_app_based_summary(screenshots_data)
+            formatted_summary = format_app_summary_for_display(app_summary)
 
         # Print to console with rich panel
         console.print()

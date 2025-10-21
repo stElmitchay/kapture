@@ -52,7 +52,7 @@ def summarize_work_with_ai(all_ocr_text, ollama_url, ollama_model, is_friday=Fal
     # Create the prompt
     today = datetime.now().strftime("%A, %B %d, %Y")
 
-    prompt = f"""You are analyzing screenshots from a user's workday to generate an accurate daily work summary.
+    prompt = f"""You are analyzing screenshots from a user's workday to generate an accurate, narrative-focused daily work summary.
 
 Today is: {today}
 
@@ -65,44 +65,56 @@ Screenshots capture what the user is LOOKING AT on their screen, NOT what they c
 - Content the user is CONSUMING (reading, browsing, viewing)
 - Content the user is PRODUCING (writing, editing, building, coding)
 
-CRITICAL RULES:
+CRITICAL: WRITE NARRATIVELY, NOT MECHANICALLY
+❌ BAD (mechanical, file-focused):
+  - "Worked on README.md"
+  - "Worked on CLAUDE.md"
+  - "Pushed changes to remote"
+  - "Committed changes"
+
+✅ GOOD (narrative, context-focused):
+  - "Explored Solana Actions (SAS) to better understand how to implement them in the upcoming hackathon projects"
+  - "Encountered several issues with the documentation and example repositories, including broken references and mismatched dependencies"
+  - "Debugged and fixed all the errors by the end of the day, confirming successful action registration and endpoint response"
+  - "Continued working on boilerplate code for the investment tracking idea"
+
+SUMMARY WRITING GUIDELINES:
+1. **Tell a story** - Group related activities into cohesive narratives
+2. **Explain WHY, not just WHAT** - Why were you working on this? What was the goal?
+3. **Be specific about OUTCOMES** - What did you learn? What did you fix? What progress was made?
+4. **Avoid listing filenames** - Instead describe the feature/project/problem you were working on
+5. **Quality over quantity** - 3-5 well-written narrative bullets > 10 mechanical file mentions
+6. **Connect the dots** - If you see multiple related files/activities, synthesize them into one narrative
+
+CONTENT CLASSIFICATION:
 1. **Code Editors (VS Code, PyCharm, etc.)**:
    - Look for filenames in window titles or visible in the editor
-   - Report: "Edited [filename]" or "Worked on [project/file]"
-   - Don't report: generic code snippets without context
+   - Instead of "Edited setup.py", write "Configured project dependencies and build settings"
+   - Instead of "Worked on blockchain.py", write "Implemented blockchain integration for transaction logging"
 
 2. **Terminal/Command Line**:
-   - Report commands the user typed and ran
-   - Report: "Ran tests", "Deployed to production", "Installed dependencies"
-   - Don't report: command output unless it shows errors/blockers
+   - Look for what the commands ACCOMPLISHED, not just that they ran
+   - Instead of "Ran tests", write "Verified authentication flow works correctly with new OAuth provider"
+   - Instead of "Installed dependencies", write "Set up development environment for Solana smart contract project"
 
 3. **Web Browsers**:
-   - This is where most errors happen! Be very careful here.
-   - If viewing documentation/tutorials: Report "Researched [topic/technology]"
-   - DO NOT report example code, sample projects, or tutorial content as work done
-   - Example: Seeing "Build a Todo App Tutorial" → Report: "Researched web app development"
-   - Example: Seeing tutorial code for a chat app → Report: "Studied chat application patterns"
-   - DO NOT say "I built X" unless you see it in a code editor with filenames
+   - If viewing documentation/tutorials: Explain what you were trying to learn/solve
+   - Instead of "Researched React hooks", write "Researched React hooks patterns to improve state management in the dashboard component"
+   - DO NOT report example code or tutorial content as your work
 
 4. **Documentation/Tutorial Sites**:
-   - These show EXAMPLE content, not YOUR content
-   - Only mention you researched/learned the topic
-   - Never claim you built the examples shown
+   - Focus on the LEARNING GOAL, not the tutorial title
+   - Instead of "Read Solana documentation", write "Studied Solana program deployment process to prepare for hackathon project"
 
 5. **Twitter/Social Media**:
-   - Only report if it's directly work-related (e.g., Solana news for your industry)
-   - Don't report casual browsing
+   - Only report if directly work-related (Solana ecosystem news, industry updates)
+   - Mention the NEWS, not just that you browsed Twitter
 
-6. **Communication Tools (Slack, Discord, Email)**:
-   - Report topics discussed if work-related
-   - Don't include personal chats
-
-QUALITY CHECKS - Ask yourself for EACH item:
-1. Did I see this in a CODE EDITOR with a filename? → OK to report as "worked on"
-2. Did I see this run in a TERMINAL? → OK to report as "ran/executed"
-3. Did I see this on a WEBSITE/TUTORIAL? → Only report "researched [topic]", NOT the example content
-4. Can I identify a specific file, command, or project name? → Good, be specific
-5. Is this just example/demo content from a tutorial? → DO NOT report as work done
+QUALITY CHECKS - Before writing each item:
+1. Does this explain CONTEXT and PURPOSE? (Good)
+2. Does this just list a filename or command? (Bad - rewrite it)
+3. Would someone reading this understand what I accomplished and why? (Good)
+4. Is this grouped with related activities into a coherent narrative? (Good)
 
 OCR TEXT FROM SCREENSHOTS:
 {combined_text}
@@ -110,25 +122,46 @@ OCR TEXT FROM SCREENSHOTS:
 Generate a summary in this EXACT format:
 
 WORKED_ON:
-[List ONLY activities where you saw the user CREATING something (editing files, writing code, running commands, building projects). Include specific filenames/projects. For web research, only say "Researched [topic]" - do NOT mention the example content shown. Minimum 3-8 items. If you see almost no actual work, write "Limited work activity detected"]
+[Write 3-7 narrative bullets that tell the story of your day. Each bullet should:
+- Explain WHAT you worked on and WHY
+- Group related files/activities together
+- Focus on features/problems/goals, not individual filenames
+- Be specific about context and progress made
+If you see very little actual work, write "Limited work activity detected - mostly research and planning"]
 
 COMPLETED:
-[List ONLY tasks with clear evidence of completion (tests passing, PR merged, deployment succeeded, tutorial finished). Be conservative. If uncertain, write "No specific completions identified from screenshots"]
+[List only tasks with CLEAR EVIDENCE of completion:
+- Tests passing (show what was tested)
+- Features deployed (explain what feature)
+- Bugs fixed (describe the bug and fix)
+- Tutorials/courses finished (mention what you learned)
+Be conservative and specific. If uncertain, write "No specific completions identified - work in progress"]
 
 SOLANA_NEWS:
-[List ONLY if you see Twitter/news screenshots about Solana. Quote what you saw. If none, write "No Solana news captured in screenshots"]
+[If you see Twitter/news about Solana ecosystem:
+- Quote the actual news/announcement
+- Explain why it's relevant to the user's work
+If none, write "No Solana news captured in screenshots"]
 
 BLOCKERS:
-[List ONLY specific errors, failed tests, or problems you see in terminal/console output. If none, write "No significant blockers identified"]
+[List SPECIFIC technical problems you see:
+- Error messages (quote the error)
+- Failed tests (which tests, why they failed)
+- Documentation issues (what was confusing/broken)
+If none, write "No significant blockers identified"]
 
 TOMORROW_FOCUS:
-{"[Skip this section - it's Friday]" if is_friday else "[Based on what was started but not completed, suggest 2-3 specific next steps. If unclear, write 'Continue with current project work']"}
+{"[Skip this section - it's Friday]" if is_friday else "[Based on incomplete work, suggest 2-3 specific next actions:
+- Continue [specific feature/task] by [specific next step]
+- Focus on [area that needs attention]
+Be actionable and specific. If unclear, write 'Continue current project momentum']"}
 
-FINAL CHECK - Before submitting, verify:
-✓ No example/tutorial content reported as user's work
-✓ Every "worked on" item is from code editor, terminal, or has specific filename/project
-✓ Web browsing reported only as "researched [topic]", not the examples shown
-✓ Zero hallucination - only what you actually saw
+FINAL CHECK - Before submitting:
+✓ Every item is narrative and contextual (not mechanical)
+✓ No standalone filenames without context
+✓ Related activities are grouped together
+✓ Each bullet explains WHY and WHAT was accomplished
+✓ Zero hallucination - only what you actually saw in screenshots
 """
 
     try:
@@ -246,18 +279,21 @@ def format_ai_summary_for_display(summary):
     tasks = summary.get('tasks_worked_on', [])
     if tasks:
         for task in tasks:
-            lines.append(f"{task}")
+            # Add bullet point if not already present
+            task_line = task if task.startswith('-') or task.startswith('•') else f"- {task}"
+            lines.append(task_line)
     else:
-        lines.append("[List specific tasks you worked on - be detailed, not vague]")
-        lines.append("[Mention key progress made on projects]")
+        lines.append("- Limited work activity detected")
     lines.append("")
 
     # 🏁 What I Completed
     completed = summary.get('completed_tasks', [])
-    if completed:
+    if completed and completed[0] != "No specific completions identified from screenshots" and completed[0] != "No specific completions identified - work in progress":
         lines.append("🏁 What I Completed:")
         for item in completed:
-            lines.append(f"{item}")
+            # Add bullet point if not already present
+            item_line = item if item.startswith('-') or item.startswith('•') else f"- {item}"
+            lines.append(item_line)
         lines.append("")
 
     # 📰 What's the latest in the Solana Ecosystem
@@ -265,7 +301,9 @@ def format_ai_summary_for_display(summary):
     if solana_news and solana_news[0] != "No Solana news captured in screenshots":
         lines.append("📰 What's the latest in the Solana Ecosystem:")
         for news in solana_news:
-            lines.append(f"{news}")
+            # Add bullet point if not already present
+            news_line = news if news.startswith('-') or news.startswith('•') else f"- {news}"
+            lines.append(news_line)
         lines.append("")
 
     # ⚠️ Issues / Blockers
@@ -273,21 +311,25 @@ def format_ai_summary_for_display(summary):
     blockers = summary.get('problems_blockers', [])
     if blockers and blockers[0] != "No significant blockers identified":
         for blocker in blockers:
-            lines.append(f"{blocker}")
+            # Add bullet point if not already present
+            blocker_line = blocker if blocker.startswith('-') or blocker.startswith('•') else f"- {blocker}"
+            lines.append(blocker_line)
     else:
-        lines.append("[Mention specific challenges or dependencies]")
-        lines.append("[Explain what help you need or how you're addressing them]")
+        lines.append("- None identified")
     lines.append("")
 
     # 🔜 Focus for Tomorrow
     if not summary.get('is_friday', False):
         lines.append("🔜 Focus for Tomorrow:")
         tomorrow = summary.get('tomorrow_focus', [])
-        if tomorrow:
+        if tomorrow and tomorrow[0] != "Continue current project momentum" and "Continue current project work" not in tomorrow[0]:
             for focus in tomorrow:
-                lines.append(f"{focus}")
+                # Add bullet point if not already present
+                focus_line = focus if focus.startswith('-') or focus.startswith('•') else f"- {focus}"
+                lines.append(focus_line)
         else:
-            lines.append("[List specific priorities for the next day]")
+            # Show the generic message if that's what we got
+            lines.append(f"- {tomorrow[0] if tomorrow else 'Continue current project work'}")
         lines.append("")
 
     return "\n".join(lines)
