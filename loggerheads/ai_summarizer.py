@@ -151,10 +151,7 @@ BLOCKERS:
 If none, write "No significant blockers identified"]
 
 TOMORROW_FOCUS:
-{"[Skip this section - it's Friday]" if is_friday else "[Based on incomplete work, suggest 2-3 specific next actions:
-- Continue [specific feature/task] by [specific next step]
-- Focus on [area that needs attention]
-Be actionable and specific. If unclear, write 'Continue current project momentum']"}
+{'[Skip this section - it is Friday]' if is_friday else '[Based on incomplete work, suggest 2-3 specific next actions:\n- Continue [specific feature/task] by [specific next step]\n- Focus on [area that needs attention]\nBe actionable and specific. If unclear, write "Continue current project momentum"]'}
 
 FINAL CHECK - Before submitting:
 ✓ Every item is narrative and contextual (not mechanical)
