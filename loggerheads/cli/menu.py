@@ -44,7 +44,7 @@ def interactive_menu():
         print(f"\n{mode_icon} Your role: {mode_name}")
 
         if user_role == "employee":
-            print("\n[1] Start tracking")
+            print("\n[1] Start tracking (with dashboard)")
             print("[2] Submit hours")
             print("[3] Check vault status")
             print("[4] Withdraw funds")

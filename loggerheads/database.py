@@ -51,7 +51,7 @@ def save_logs(logs):
     conn.close()
 
 
-def save_screenshot(file_path, extracted_text="", log_id=None):
+def save_screenshot(file_path, extracted_text="", log_id=None, timestamp=None):
     """
     Save screenshot metadata to database.
 
@@ -59,14 +59,25 @@ def save_screenshot(file_path, extracted_text="", log_id=None):
         file_path (str): Path to the screenshot file
         extracted_text (str): OCR-extracted text from the screenshot
         log_id (int, optional): ID of related activity log entry
+        timestamp (str, optional): Custom timestamp (ISO format) for demo mode
     """
     db_path = get_db_path()
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO screenshots (file_path, extracted_text, log_id) VALUES (?, ?, ?)",
-        (file_path, extracted_text, log_id)
-    )
+    
+    if timestamp:
+        # Custom timestamp (for demo mode)
+        cursor.execute(
+            "INSERT INTO screenshots (file_path, extracted_text, log_id, timestamp) VALUES (?, ?, ?, ?)",
+            (file_path, extracted_text, log_id, timestamp)
+        )
+    else:
+        # Auto timestamp (normal operation)
+        cursor.execute(
+            "INSERT INTO screenshots (file_path, extracted_text, log_id) VALUES (?, ?, ?)",
+            (file_path, extracted_text, log_id)
+        )
+    
     conn.commit()
     conn.close()
 

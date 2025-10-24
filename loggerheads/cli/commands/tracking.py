@@ -60,7 +60,21 @@ def start():
             print("")
 
     print("🚀 Starting tracker...")
-    run_scheduled_tracker()
+    print("📊 Launching dashboard...\n")
+
+    # Import dashboard
+    from ..dashboard_textual import show_textual_dashboard
+
+    # Start tracker in background
+    from ...scheduler import run_as_daemon
+    run_as_daemon()
+
+    # Give it a moment to start
+    import time
+    time.sleep(1)
+
+    # Launch dashboard (blocks until user exits)
+    show_textual_dashboard()
 
 
 def show_status():

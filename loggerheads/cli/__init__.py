@@ -3,7 +3,7 @@ Main CLI entry point - clean and modular.
 """
 
 import sys
-from .commands import tracking, wallet, work, vault
+from .commands import tracking, wallet, work, vault, demo
 from .onboarding import simple_onboarding
 from .menu import interactive_menu, show_welcome_and_launch
 from ..autostart import install_autostart, uninstall_autostart, check_autostart_status
@@ -18,6 +18,8 @@ COMMAND_MAP = {
     'status': tracking.show_status,
     'logs': tracking.view_logs,
     'screenshots': tracking.view_screenshots,
+    'dashboard': lambda: __import__('loggerheads.cli.dashboard_textual', fromlist=['show_textual_dashboard']).show_textual_dashboard(),
+    'dashboard-old': lambda: __import__('loggerheads.cli.dashboard', fromlist=['show_dashboard']).show_dashboard(),
     
     # Wallet commands
     'balance': wallet.show_balance,
@@ -46,6 +48,9 @@ COMMAND_MAP = {
     
     # Auto-submit
     'auto-submit': auto_submit,
+    
+    # Demo mode
+    'demo': demo.demo_command,
 }
 
 
@@ -68,7 +73,7 @@ def print_help():
 👤 FOR EMPLOYEES:
 
     loggerheads              Start here! (interactive setup)
-    loggerheads start        Start tracking work
+    loggerheads start        Start tracking with live dashboard
     loggerheads status       Check tracking status
     loggerheads balance      Check SOL/USDC balances
     loggerheads submit       Submit hours to blockchain
@@ -90,6 +95,7 @@ def print_help():
 
     loggerheads logs         View live logs
     loggerheads screenshots  View recent screenshots
+    loggerheads demo         Generate fake work data (for testing/demos)
     loggerheads install      Enable auto-start on boot
     loggerheads menu         Interactive menu
     loggerheads config       View configuration

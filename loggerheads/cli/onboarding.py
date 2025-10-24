@@ -161,7 +161,8 @@ def employee_onboarding():
 
     print("\n✅ You're ready to start earning!")
     print("\n📋 Next steps:")
-    print("  1. Install auto-start: loggerheads install")
-    print("  2. Start tracking: loggerheads start")
+    print("  1. Start tracking: loggerheads start")
+    print("     (launches live dashboard with your stats)")
+    print("  2. Install auto-start: loggerheads install")
     print("\nThat's it! Work normally and earn automatically. 🚀")
     print("")

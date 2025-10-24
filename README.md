@@ -93,6 +93,31 @@ Send your wallet address to employee. They configure and start working. Payments
 
 ---
 
+## Security: Oracle Setup
+
+⚠️ **IMPORTANT:** For production deployments, you must generate a secure oracle keypair.
+
+### Quick Security Setup
+
+```bash
+# 1. Generate secure oracle keypair
+python3 -m loggerheads.oracle_secure --generate
+
+# 2. Set environment variable (add to ~/.bashrc or ~/.zshrc)
+export ORACLE_KEYPAIR_PATH=~/.loggerheads/oracle-keypair.json
+
+# 3. Verify setup
+python3 -m loggerheads.oracle_secure --pubkey
+```
+
+**Why this matters:** The oracle signs work submissions. Without a secure keypair, anyone can forge work hours.
+
+**For testing/demo:** The app will use a demo oracle (with security warnings). This is fine for hackathons/testing but NOT for production.
+
+**See [Oracle Security Guide](docs/ORACLE_SECURITY.md)** for detailed setup and best practices.
+
+---
+
 ## Commands
 
 ```bash

@@ -49,6 +49,11 @@ activity_log.db
 .env.local
 .env.*.local
 
+# Oracle keypairs (NEVER commit these!)
+oracle-keypair.json
+*oracle*.json
+oracle_*.json
+
 # Logs
 *.log
 
