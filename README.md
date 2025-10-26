@@ -1,196 +1,150 @@
-# Loggerheads
+# Kapture
 
-**Automatic work tracking meets blockchain payments.** Your hours are tracked automatically through AI-powered screen analysis, then verified and paid through Solana smart contracts.
+**Unlock Your Days**
+
+Get paid your full salary upfront, then unlock it daily by proving you worked.
 
 ---
 
 ## What Is This?
 
-Loggerheads is a work tracking system that combines local AI analysis with blockchain automation:
+Kapture flips traditional payment on its head:
 
-**The Problem It Solves:**
-- Manual time tracking is tedious and easy to forget
-- Traditional payment systems require trust between employer and employee
-- There's no verifiable proof of work completion
+**Traditional Way:**
+- Work for 2 weeks or a month
+- Wait until payday
+- You get paid
 
-**How Loggerheads Works:**
-1. You work normally on your computer
-2. The app takes periodic screenshots and uses OCR + AI to understand what you're doing
-3. Your work hours are calculated automatically
-4. Hours are submitted to a Solana smart contract
-5. When you hit your daily target, payment unlocks automatically
-6. You withdraw your earnings to your wallet
+**The Kapture Way:**
+- Get your full monthly salary upfront (e.g., $3,000)
+- It's locked in a blockchain vault
+- Each day you hit your work quota → That day's portion unlocks (e.g., $150)
+- Miss your quota → You lose that day's payment
+- Everything is automatic and verified on the blockchain
 
-**Key Benefits:**
-- **Zero manual tracking** - Just work, everything else is automatic
-- **Trustless payments** - Smart contracts enforce payment rules, no one can cheat
-- **Privacy-first** - All analysis happens locally on your machine
-- **Transparent** - Everything is verifiable on the blockchain
+**Example:**
+
+You're a UX engineer earning $3,000/month. On day 1:
+- Your employer locks $3,000 USDC in a vault for you
+- You need to work 8 hours/day to unlock $150/day
+- Kapture tracks your work automatically throughout the day
+- At the end of the day, proof is sent to the blockchain
+- If you worked 8+ hours → $150 unlocks to your wallet
+- If you worked less → You lose that $150
+- Repeat for 20 working days
+
+**Who Is This For?**
+- **Companies with remote workers** - Ensure accountability without micromanagement
+- **DAOs** - Pay contributors with built-in verification
+- **Freelancers** - Build trust with new clients through provable work
+- **Self-discipline** - Lock your own money to force yourself to work
+- **Bootcamps/Education** - Students unlock refunds by completing daily work
+- **Anyone** who wants automatic, trustless work verification
 
 ---
 
 ## Installation
 
-### Requirements
-- **Python 3.8+** - Check with `python3 --version`
+### What You Need
+- **Python 3.8 or newer** - Check by running `python3 --version` in your terminal
+- **Git** - Check by running `git --version` in your terminal
+- **Solana CLI** - Check by running `solana --version` in your terminal
 - **macOS or Linux** - Currently supported platforms
-- **Solana CLI** - The app will help you install this
+- **5-10 minutes** for setup
 
-### Install Loggerheads
+### Step 1: Clone the Repository
 
-**Option 1: Quick Install (Recommended)**
-```bash
-pip3 install loggerheads
-```
-
-**Option 2: From Source**
+Open your terminal and run:
 ```bash
 git clone https://github.com/stElmitchay/loggerheads
 cd loggerheads
+```
+
+### Step 2: Install Python Dependencies
+
+Run this command:
+```bash
 pip3 install -e .
 ```
 
-### First-Time Setup
+This installs all the Python packages Kapture needs.
 
-After installation, just run:
+### Step 3: Run Kapture
+
+Now you're ready! Run:
 ```bash
 loggerheads
 ```
 
-The interactive menu will guide you through everything with simple questions. No technical knowledge required.
+You'll see a menu with simple questions. The app will guide you through the rest of the setup.
+
+**First time?** It will ask if you're an employer or employee, then walk you through creating a vault or connecting to one.
 
 ---
 
-## Getting Started
+## How To Use It
 
-### For Employees
+### If You're An Employer
 
-**Setup (2 minutes):**
+**Setup (takes 5 minutes):**
+
+1. Run `loggerheads`
+2. Choose "Employer" when asked
+3. Create a payment vault (the app will guide you)
+4. Put USDC into the vault (e.g., $3,000 for one employee for one month)
+5. Set the rules:
+   - Daily work hours needed (e.g., 8 hours)
+   - Daily payment amount (e.g., $150)
+6. Give your wallet address to your employee
+
+That's it! Your employee sets up their app and starts working. Money unlocks automatically each day they hit their quota.
+
+
+### If You're An Employee
+
+**Setup (takes 2 minutes):**
+
+1. Run `loggerheads`
+2. Choose "Employee" when asked
+3. Enter your employer's wallet address (they'll give you this)
+4. Say "yes" to auto-submit (recommended)
+5. Done!
+
+**Daily usage:**
+
 ```bash
-$ loggerheads
+loggerheads start
 ```
-- Choose "Employee" mode
-- Enter your employer's wallet address (they'll give you this)
-- Configure auto-submit (recommended: Yes)
-- Done!
 
-**Daily Usage:**
+Just work normally. Kapture captures your activity automatically. At the end of the day:
+- Your hours are calculated
+- Proof is sent to the blockchain
+- If you hit your quota → Money unlocks
+- A summary gets sent to Discord (if configured)
+
+Press Ctrl+C when you're done working.
+
+**Check your money:**
 ```bash
-$ loggerheads start
-```
-This starts the tracker. Work normally - your activity is captured automatically. Press Ctrl+C when you're done for the day.
-
-**Check Your Status:**
-```bash
-$ loggerheads status      # See hours worked today
-$ loggerheads balance     # Check your earnings
-$ loggerheads withdraw    # Withdraw your USDC
+loggerheads balance      # See what you've unlocked
+loggerheads withdraw     # Send it to your wallet
 ```
 
-### For Employers
-
-**Setup (5 minutes):**
-```bash
-$ loggerheads
-```
-- Choose "Employer" mode
-- Follow prompts to create a payment vault
-- Fund it with USDC
-- Set daily target hours and payment amount
-- Share your wallet address with employees
-
-That's it! Employees configure their app with your wallet address and start working. Payments unlock automatically when they hit their targets.
 
 ---
 
-## Common Commands
+## All Commands
 
 ```bash
-loggerheads              # Interactive menu (start here)
-loggerheads start        # Start tracking work
-loggerheads status       # Check today's hours
-loggerheads balance      # Check wallet balance
-loggerheads submit       # Submit hours to blockchain
-loggerheads withdraw     # Withdraw earned USDC
-loggerheads config       # View your configuration
+loggerheads              # Open the menu (start here if you're new)
+loggerheads start        # Start tracking your work
+loggerheads status       # See how many hours you've worked today
+loggerheads balance      # Check how much money you've unlocked
+loggerheads submit       # Send your hours to the blockchain (happens automatically)
+loggerheads withdraw     # Move unlocked money to your wallet
+loggerheads config       # See your settings
 loggerheads help         # Show all commands
 ```
-
----
-
-## How It Works (Technical Overview)
-
-1. **Screen Capture** - Takes screenshots every few minutes
-2. **OCR Processing** - Extracts text from screenshots using Tesseract
-3. **AI Analysis** - Understands what applications you're using and what work you're doing
-4. **Local Storage** - Everything stored in local SQLite database (private)
-5. **Blockchain Submission** - Hours submitted to Solana smart contract with oracle signature
-6. **Smart Contract Verification** - Contract verifies oracle signature and unlocks payment
-7. **Withdrawal** - Employee withdraws USDC to their wallet
-
-**Privacy Note:** All screenshots and analysis happen locally on your machine. Nothing is uploaded to any server. Only your work hours (not screenshots) are submitted to the blockchain.
-
----
-
-## Security & Production Setup
-
-**For Testing/Demos:** The app works out of the box with demo credentials. Perfect for trying it out.
-
-**For Production:** You must set up a secure oracle keypair:
-
-```bash
-# Generate secure keypair
-python3 -m loggerheads.oracle_secure --generate
-
-# Add to your shell config (~/.bashrc or ~/.zshrc)
-export ORACLE_KEYPAIR_PATH=~/.loggerheads/oracle-keypair.json
-
-# Verify
-python3 -m loggerheads.oracle_secure --pubkey
-```
-
-The oracle signs work submissions to prevent fraud. Without a secure oracle, anyone could fake work hours.
-
-See [Oracle Security Guide](docs/ORACLE_SECURITY.md) for complete details.
-
----
-
-## Testing on Solana Devnet
-
-Want to try it out without real money?
-
-```bash
-# Install Solana CLI
-sh -c "$(curl -sSfL https://release.solana.com/stable/install)"
-
-# Switch to devnet
-solana config set --url devnet
-
-# Get free test SOL
-solana airdrop 2
-
-# Run quick test
-./quick_test.sh
-```
-
-The test script sets up test wallets and walks you through the complete employer + employee flow.
-
----
-
-## Documentation
-
-**Quick Start Guides:**
-- [Employee Setup](docs/QUICK_START_EMPLOYEE.md) - Detailed employee walkthrough
-- [Employer Setup](docs/QUICK_START_EMPLOYER.md) - Detailed employer walkthrough
-- [Installing from Source](docs/INSTALL_FROM_SOURCE.md) - For tech teams
-
-**Production & Security:**
-- [Production Deployment](docs/PRODUCTION_DEPLOYMENT.md) - Production setup guide
-- [Oracle Security](docs/ORACLE_SECURITY.md) - Security best practices
-
-**Development:**
-- [Architecture](docs/ARCHITECTURE.md) - How the system works
-- [Contributing](docs/CONTRIBUTING.md) - Development workflow
 
 ---
 
@@ -214,11 +168,3 @@ The test script sets up test wallets and walks you through the complete employer
 - [Open an issue](https://github.com/stElmitchay/loggerheads/issues)
 - Check the docs folder for detailed guides
 
----
-
-## Project Info
-
-**Network:** Solana (Devnet for testing, Mainnet for production)
-**Smart Contract:** `5BzzMPy2vJx6Spgcy6hsepQsdBdWAe9SmGvTqpssrk2D`
-**License:** MIT
-**Repository:** https://github.com/stElmitchay/loggerheads
