@@ -39,6 +39,7 @@ setup(
         "python-dotenv>=1.0.0",
         "pynput>=1.7.6",
         "rich>=13.0.0",
+        "textual>=0.41.0",
         "solana>=0.30.0",
         "solders>=0.18.0",
     ],

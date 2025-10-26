@@ -1,186 +1,224 @@
 # Loggerheads
 
-**Blockchain-powered work tracking with automated payments.** Track work hours automatically, submit to Solana blockchain, earn USDC when you hit targets.
+**Automatic work tracking meets blockchain payments.** Your hours are tracked automatically through AI-powered screen analysis, then verified and paid through Solana smart contracts.
+
+---
 
 ## What Is This?
 
-Loggerheads combines automatic activity tracking with blockchain-enforced payments:
+Loggerheads is a work tracking system that combines local AI analysis with blockchain automation:
 
-- **For Employees:** Work normally → Hours tracked automatically → Get paid in USDC
-- **For Employers:** Create vaults → Fund with USDC → Payments unlock automatically
+**The Problem It Solves:**
+- Manual time tracking is tedious and easy to forget
+- Traditional payment systems require trust between employer and employee
+- There's no verifiable proof of work completion
 
-Everything is menu-driven with simple yes/no questions.
+**How Loggerheads Works:**
+1. You work normally on your computer
+2. The app takes periodic screenshots and uses OCR + AI to understand what you're doing
+3. Your work hours are calculated automatically
+4. Hours are submitted to a Solana smart contract
+5. When you hit your daily target, payment unlocks automatically
+6. You withdraw your earnings to your wallet
+
+**Key Benefits:**
+- **Zero manual tracking** - Just work, everything else is automatic
+- **Trustless payments** - Smart contracts enforce payment rules, no one can cheat
+- **Privacy-first** - All analysis happens locally on your machine
+- **Transparent** - Everything is verifiable on the blockchain
 
 ---
 
 ## Installation
 
-### Option 1: From PyPI (Recommended)
+### Requirements
+- **Python 3.8+** - Check with `python3 --version`
+- **macOS or Linux** - Currently supported platforms
+- **Solana CLI** - The app will help you install this
 
+### Install Loggerheads
+
+**Option 1: Quick Install (Recommended)**
 ```bash
-pip install loggerheads
+pip3 install loggerheads
 ```
 
-### Option 2: From Source (For Companies)
-
-For tech teams deploying in a company:
-
+**Option 2: From Source**
 ```bash
 git clone https://github.com/stElmitchay/loggerheads
 cd loggerheads
 pip3 install -e .
 ```
 
-**See [Install From Source Guide](docs/INSTALL_FROM_SOURCE.md)** for complete employer + employee setup.
+### First-Time Setup
 
-**Requirements:**
-- Python 3.8+
-- Solana CLI (app will guide installation)
-
-**First run:**
+After installation, just run:
 ```bash
 loggerheads
 ```
 
-The interactive menu will guide you through setup.
+The interactive menu will guide you through everything with simple questions. No technical knowledge required.
 
 ---
 
-## Quick Start
+## Getting Started
 
-### For Employees (2 minutes)
+### For Employees
 
+**Setup (2 minutes):**
 ```bash
 $ loggerheads
+```
+- Choose "Employee" mode
+- Enter your employer's wallet address (they'll give you this)
+- Configure auto-submit (recommended: Yes)
+- Done!
 
-# Choose: Employee
-# Enter: Employer's wallet address
-# Enable auto-submit: y
-# Done!
+**Daily Usage:**
+```bash
+$ loggerheads start
+```
+This starts the tracker. Work normally - your activity is captured automatically. Press Ctrl+C when you're done for the day.
 
-$ loggerheads start  # Start tracking
+**Check Your Status:**
+```bash
+$ loggerheads status      # See hours worked today
+$ loggerheads balance     # Check your earnings
+$ loggerheads withdraw    # Withdraw your USDC
 ```
 
-Your work is tracked automatically. At end of day, hours submit to blockchain. When you hit daily target, payment unlocks. Withdraw anytime.
+### For Employers
 
-### For Employers (2 minutes)
-
+**Setup (5 minutes):**
 ```bash
 $ loggerheads
-
-# Choose: Employer
-# Enter: Employee wallet address
-# Fund amount: 3000 USDC
-# Daily target: 8 hours
-# Daily pay: 100 USDC
-# Done!
 ```
+- Choose "Employer" mode
+- Follow prompts to create a payment vault
+- Fund it with USDC
+- Set daily target hours and payment amount
+- Share your wallet address with employees
 
-Send your wallet address to employee. They configure and start working. Payments unlock automatically when targets met.
-
----
-
-## How It Works
-
-1. **Employer** creates vault on Solana, locks USDC, sets rules
-2. **Employee** installs app, starts tracking work activity
-3. **App** captures screenshots, analyzes work (locally, private)
-4. **Auto-submit** sends hours to blockchain daily
-5. **Smart contract** unlocks payment if target met
-6. **Employee** withdraws earnings to wallet
-
-**Security:** Employee can't fake hours (oracle verification). Employer can't withhold payment (blockchain enforcement).
+That's it! Employees configure their app with your wallet address and start working. Payments unlock automatically when they hit their targets.
 
 ---
 
-## Security: Oracle Setup
-
-⚠️ **IMPORTANT:** For production deployments, you must generate a secure oracle keypair.
-
-### Quick Security Setup
+## Common Commands
 
 ```bash
-# 1. Generate secure oracle keypair
+loggerheads              # Interactive menu (start here)
+loggerheads start        # Start tracking work
+loggerheads status       # Check today's hours
+loggerheads balance      # Check wallet balance
+loggerheads submit       # Submit hours to blockchain
+loggerheads withdraw     # Withdraw earned USDC
+loggerheads config       # View your configuration
+loggerheads help         # Show all commands
+```
+
+---
+
+## How It Works (Technical Overview)
+
+1. **Screen Capture** - Takes screenshots every few minutes
+2. **OCR Processing** - Extracts text from screenshots using Tesseract
+3. **AI Analysis** - Understands what applications you're using and what work you're doing
+4. **Local Storage** - Everything stored in local SQLite database (private)
+5. **Blockchain Submission** - Hours submitted to Solana smart contract with oracle signature
+6. **Smart Contract Verification** - Contract verifies oracle signature and unlocks payment
+7. **Withdrawal** - Employee withdraws USDC to their wallet
+
+**Privacy Note:** All screenshots and analysis happen locally on your machine. Nothing is uploaded to any server. Only your work hours (not screenshots) are submitted to the blockchain.
+
+---
+
+## Security & Production Setup
+
+**For Testing/Demos:** The app works out of the box with demo credentials. Perfect for trying it out.
+
+**For Production:** You must set up a secure oracle keypair:
+
+```bash
+# Generate secure keypair
 python3 -m loggerheads.oracle_secure --generate
 
-# 2. Set environment variable (add to ~/.bashrc or ~/.zshrc)
+# Add to your shell config (~/.bashrc or ~/.zshrc)
 export ORACLE_KEYPAIR_PATH=~/.loggerheads/oracle-keypair.json
 
-# 3. Verify setup
+# Verify
 python3 -m loggerheads.oracle_secure --pubkey
 ```
 
-**Why this matters:** The oracle signs work submissions. Without a secure keypair, anyone can forge work hours.
+The oracle signs work submissions to prevent fraud. Without a secure oracle, anyone could fake work hours.
 
-**For testing/demo:** The app will use a demo oracle (with security warnings). This is fine for hackathons/testing but NOT for production.
-
-**See [Oracle Security Guide](docs/ORACLE_SECURITY.md)** for detailed setup and best practices.
+See [Oracle Security Guide](docs/ORACLE_SECURITY.md) for complete details.
 
 ---
 
-## Commands
+## Testing on Solana Devnet
 
-```bash
-loggerheads              # Interactive menu
-loggerheads start        # Start tracking
-loggerheads status       # Check today's hours
-loggerheads balance      # Check earnings
-loggerheads submit       # Submit hours manually
-loggerheads withdraw     # Withdraw funds
-loggerheads config       # View settings
-loggerheads help         # Show help
-```
-
----
-
-## Testing (Devnet)
+Want to try it out without real money?
 
 ```bash
 # Install Solana CLI
 sh -c "$(curl -sSfL https://release.solana.com/stable/install)"
 
-# Get devnet SOL
+# Switch to devnet
 solana config set --url devnet
+
+# Get free test SOL
 solana airdrop 2
 
-# Run automated test setup
-git clone https://github.com/stElmitchay/loggerheads
-cd loggerheads
+# Run quick test
 ./quick_test.sh
 ```
 
-The test script creates test wallets, generates fake work data, and walks you through the full flow.
+The test script sets up test wallets and walks you through the complete employer + employee flow.
 
 ---
 
 ## Documentation
 
-**Installation:**
-- [Install From Source](docs/INSTALL_FROM_SOURCE.md) - For tech teams deploying in companies
+**Quick Start Guides:**
+- [Employee Setup](docs/QUICK_START_EMPLOYEE.md) - Detailed employee walkthrough
+- [Employer Setup](docs/QUICK_START_EMPLOYER.md) - Detailed employer walkthrough
+- [Installing from Source](docs/INSTALL_FROM_SOURCE.md) - For tech teams
 
-**Setup Guides:**
-- [Employee Quick Start](docs/QUICK_START_EMPLOYEE.md) - 10-minute setup
-- [Employer Quick Start](docs/QUICK_START_EMPLOYER.md) - 5-minute setup
-- [Production Deployment](docs/PRODUCTION_DEPLOYMENT.md) - Full deployment guide
+**Production & Security:**
+- [Production Deployment](docs/PRODUCTION_DEPLOYMENT.md) - Production setup guide
+- [Oracle Security](docs/ORACLE_SECURITY.md) - Security best practices
 
 **Development:**
-- [Contributing Guide](docs/CONTRIBUTING.md) - Development workflow, testing
-- [PyPI Publishing](docs/PYPI_PUBLISHING_GUIDE.md) - Publishing updates
-
-**Technical:**
-- [Architecture](docs/ARCHITECTURE.md) - System architecture
-- [Claude Code Guide](docs/CLAUDE.md) - AI assistant instructions
+- [Architecture](docs/ARCHITECTURE.md) - How the system works
+- [Contributing](docs/CONTRIBUTING.md) - Development workflow
 
 ---
 
-## Support
+## Troubleshooting
 
-- **Issues:** https://github.com/stElmitchay/loggerheads/issues
-- **Network:** Solana Devnet
-- **Program ID:** `5BzzMPy2vJx6Spgcy6hsepQsdBdWAe9SmGvTqpssrk2D`
+**"Command not found: loggerheads"**
+- Make sure pip install completed successfully
+- Try `python3 -m loggerheads` instead
+- Add `~/.local/bin` to your PATH
+
+**"Failed to connect to Solana"**
+- Check your internet connection
+- Verify Solana CLI is installed: `solana --version`
+- Try switching network: `solana config set --url devnet`
+
+**"Screenshot permission denied"**
+- On macOS, go to System Preferences → Security & Privacy → Privacy → Screen Recording
+- Enable Terminal (or your terminal app)
+
+**More help:**
+- [Open an issue](https://github.com/stElmitchay/loggerheads/issues)
+- Check the docs folder for detailed guides
 
 ---
 
-## License
+## Project Info
 
-MIT License - See LICENSE file
+**Network:** Solana (Devnet for testing, Mainnet for production)
+**Smart Contract:** `5BzzMPy2vJx6Spgcy6hsepQsdBdWAe9SmGvTqpssrk2D`
+**License:** MIT
+**Repository:** https://github.com/stElmitchay/loggerheads
