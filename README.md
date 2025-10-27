@@ -56,8 +56,8 @@ You're a UX engineer earning $3,000/month. On day 1:
 
 Open your terminal and run:
 ```bash
-git clone https://github.com/stElmitchay/loggerheads
-cd loggerheads
+git clone https://github.com/stElmitchay/kapture
+cd kapture
 ```
 
 ### Step 2: Install Python Dependencies
