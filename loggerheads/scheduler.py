@@ -17,7 +17,7 @@ from rich.live import Live
 from rich.layout import Layout
 from rich import box
 from rich.text import Text
-from .database import init_db, save_logs, save_screenshot, get_screenshots
+from .database import init_db, save_logs, save_screenshot, get_screenshots, save_liveness_check
 from .screen_recorder import capture_screenshot
 from .ocr_processor import extract_text_from_image
 from .text_analyzer import analyze_text, generate_structured_summary, format_summary_for_display
@@ -25,6 +25,7 @@ from .ai_summarizer import summarize_work_with_ai, format_ai_summary_for_display
 from .app_based_analyzer import generate_app_based_summary, format_app_summary_for_display
 from .discord_notifier import send_summary_to_discord
 from .database_cleanup import clear_all_database_data
+from .liveness_detector import check_liveness, is_liveness_available
 from .config import (
     WORK_START_TIME,
     WORK_END_TIME,
@@ -223,13 +224,18 @@ def run_scheduled_tracker():
     """
     init_db()
 
+    # Check if liveness detection is available
+    liveness_enabled = is_liveness_available()
+
     # Create startup banner
     console.print()
+    liveness_status = "[green]Enabled ✓[/green]" if liveness_enabled else "[yellow]Disabled (opencv not installed)[/yellow]"
     console.print(Panel(
         f"[bold green]🚀 Activity Tracker Service Started[/bold green]\n\n"
         f"[cyan]📅 Work hours:[/cyan] {WORK_START_TIME} - {WORK_END_TIME}\n"
         f"[cyan]📆 Work days:[/cyan] {', '.join(['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][day] for day in WORK_DAYS)}\n"
-        f"[cyan]📸 Screenshot interval:[/cyan] {SCREENSHOT_INTERVAL} seconds\n\n"
+        f"[cyan]📸 Screenshot interval:[/cyan] {SCREENSHOT_INTERVAL} seconds\n"
+        f"[cyan]👤 Liveness detection:[/cyan] {liveness_status}\n\n"
         f"[yellow]⌨️  Controls:[/yellow]\n"
         f"  [bold]P[/bold] - Pause tracking\n"
         f"  [bold]R[/bold] - Resume tracking\n"
@@ -241,12 +247,17 @@ def run_scheduled_tracker():
     ))
     console.print()
 
+    if liveness_enabled:
+        console.print("[cyan]👤 Liveness checks will run every 30 minutes[/cyan]\n")
+
     session_logs = []
     last_status = None
     last_screenshot_time = time.time()
     last_minute_log = time.time()
+    last_liveness_check = time.time()  # Track liveness check timing
     screenshot_count = 0
     activity_count = 0
+    liveness_check_count = 0
     is_paused = False
     pause_start_time = None
     total_pause_time = 0
@@ -324,12 +335,36 @@ def run_scheduled_tracker():
 
                     last_screenshot_time = current_time
 
+                # Perform liveness check every 30 minutes
+                if liveness_enabled and (current_time - last_liveness_check >= 1800):  # 1800 seconds = 30 minutes
+                    console.print(f"[cyan]👤 Performing liveness check...[/cyan]")
+                    result = check_liveness()
+
+                    # Save to database
+                    save_liveness_check(
+                        face_detected=result['face_detected'],
+                        confidence=result['confidence'],
+                        face_count=result['face_count'],
+                        error=result.get('error')
+                    )
+
+                    if result['face_detected']:
+                        console.print(f"[green]   ✓ Face detected (confidence: {result['confidence']:.2f})[/green]")
+                    else:
+                        error_msg = f" - {result['error']}" if 'error' in result else ""
+                        console.print(f"[yellow]   ⚠️  No face detected{error_msg}[/yellow]")
+
+                    liveness_check_count += 1
+                    last_liveness_check = current_time
+
                 # Log status every minute
                 if current_time - last_minute_log >= 60:
                     table = Table(show_header=False, box=None, padding=(0, 1))
                     table.add_row("[bold cyan]⏱️  Status Update[/bold cyan]", f"[dim]{datetime.now().strftime('%H:%M:%S')}[/dim]")
                     table.add_row("[cyan]📸 Screenshots[/cyan]", f"[bold]{screenshot_count}[/bold]")
                     table.add_row("[cyan]📝 Activities[/cyan]", f"[bold]{activity_count}[/bold]")
+                    if liveness_enabled:
+                        table.add_row("[cyan]👤 Liveness Checks[/cyan]", f"[bold]{liveness_check_count}[/bold]")
                     console.print(table)
                     last_minute_log = current_time
 

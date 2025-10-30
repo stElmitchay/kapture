@@ -1,3 +1,15 @@
+# Oracle Service Requirements
+# For standalone oracle deployment (Render, Railway, etc.)
+
+# Flask API
 flask>=2.3.0
 flask-cors>=4.0.0
 flask-limiter>=3.5.0
+
+# Blockchain integration
+solana>=0.30.0
+solders>=0.18.0
+
+# Required for blockchain.py imports
+requests>=2.31.0
+python-dotenv>=1.0.0

@@ -45,14 +45,39 @@ You're a UX engineer earning $3,000/month. On day 1:
 
 ## Installation
 
-### What You Need
+### 🚀 ONE COMMAND (Recommended)
+
+```bash
+pip3 install -r requirements.txt
+```
+
+That's it! This installs **everything** you need including:
+- Activity tracking (screenshots, OCR, window monitoring)
+- Blockchain integration (Solana smart contracts)
+- Oracle service (verification API with rate limiting)
+- Biometric liveness detection (face recognition)
+- CLI tools and all dependencies
+
+**Then run:**
+```bash
+loggerheads
+```
+
+---
+
+### Alternative: Step-by-Step
+
+<details>
+<summary>Click to expand manual installation steps</summary>
+
+#### What You Need
 - **Python 3.8 or newer** - Check by running `python3 --version` in your terminal
 - **Git** - Check by running `git --version` in your terminal
 - **Solana CLI** - Check by running `solana --version` in your terminal
 - **macOS or Linux** - Currently supported platforms
 - **5-10 minutes** for setup
 
-### Step 1: Clone the Repository
+#### Step 1: Clone the Repository
 
 Open your terminal and run:
 ```bash
@@ -60,16 +85,22 @@ git clone https://github.com/stElmitchay/kapture
 cd kapture
 ```
 
-### Step 2: Install Python Dependencies
+#### Step 2: Install Python Dependencies
 
 Run this command:
 ```bash
-pip3 install -e .
+pip3 install -r requirements.txt
 ```
 
 This installs all the Python packages Kapture needs.
 
-### Step 3: Run Kapture
+#### Step 3: Install in Development Mode (Optional)
+
+```bash
+pip3 install -e .
+```
+
+#### Step 4: Run Kapture
 
 Now you're ready! Run:
 ```bash
@@ -77,6 +108,24 @@ loggerheads
 ```
 
 You'll see a menu with simple questions. The app will guide you through the rest of the setup.
+
+</details>
+
+---
+
+### ✅ Verify Installation
+
+Test that everything works:
+```bash
+./test_installation.sh
+```
+
+You should see:
+```
+✅ All dependencies installed correctly!
+✅ All modules working correctly!
+✅ Installation test complete!
+```
 
 **First time?** It will ask if you're an employer or employee, then walk you through creating a vault or connecting to one.
 

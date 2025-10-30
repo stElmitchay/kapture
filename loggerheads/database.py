@@ -38,6 +38,18 @@ def init_db(db_path=None):
         )
     """)
 
+    # Create liveness checks table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS liveness_checks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            face_detected BOOLEAN NOT NULL,
+            confidence REAL NOT NULL,
+            face_count INTEGER NOT NULL,
+            error TEXT
+        )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -180,3 +192,63 @@ def calculate_hours_worked_today(db_path=None):
 
     # Return actual hours (round to 1 decimal place for readability)
     return round(hours_worked, 1)
+
+
+def save_liveness_check(face_detected, confidence, face_count, error=None, timestamp=None):
+    """
+    Save liveness check result to database.
+
+    Args:
+        face_detected (bool): Whether a face was detected
+        confidence (float): Detection confidence (0.0-1.0)
+        face_count (int): Number of faces detected
+        error (str, optional): Error message if check failed
+        timestamp (str, optional): Custom timestamp (ISO format)
+    """
+    db_path = get_db_path()
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    if timestamp:
+        cursor.execute(
+            "INSERT INTO liveness_checks (face_detected, confidence, face_count, error, timestamp) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (face_detected, confidence, face_count, error, timestamp)
+        )
+    else:
+        cursor.execute(
+            "INSERT INTO liveness_checks (face_detected, confidence, face_count, error) "
+            "VALUES (?, ?, ?, ?)",
+            (face_detected, confidence, face_count, error)
+        )
+
+    conn.commit()
+    conn.close()
+
+
+def get_liveness_checks_today(db_path=None):
+    """
+    Get all liveness checks from today.
+
+    Args:
+        db_path (str, optional): Custom database path
+
+    Returns:
+        list: List of tuples with liveness check data
+    """
+    if db_path is None:
+        db_path = get_db_path()
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT timestamp, face_detected, confidence, face_count, error
+        FROM liveness_checks
+        WHERE DATE(timestamp) = DATE('now')
+        ORDER BY timestamp ASC
+    """)
+
+    results = cursor.fetchall()
+    conn.close()
+    return results

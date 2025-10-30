@@ -102,6 +102,49 @@ def verify_work_proof(proof: dict, hours: float) -> None:
             # If timestamp parsing fails, just skip timestamp validation
             pass
 
+    # Check work quality (if provided)
+    work_percentage = proof.get('work_percentage')
+    if work_percentage is not None:
+        # Require at least 50% work-related activity
+        if work_percentage < 50:
+            raise ValueError(
+                f"Work quality too low: {work_percentage}% work-related activity "
+                f"(minimum 50% required)"
+            )
+
+        # Warn if suspiciously high non-work activity
+        non_work_screenshots = proof.get('non_work_screenshots', 0)
+        total_screenshots = proof.get('screenshot_count', 1)
+        if non_work_screenshots > total_screenshots * 0.6:  # More than 60% non-work
+            raise ValueError(
+                f"Too much non-work activity: {non_work_screenshots}/{total_screenshots} screenshots "
+                f"({100 - work_percentage}% non-work)"
+            )
+
+    # Check liveness checks (if provided)
+    liveness_checks = proof.get('liveness_checks', [])
+    if liveness_checks:
+        failed_checks = [c for c in liveness_checks if not c.get('face_detected', False)]
+        total_checks = len(liveness_checks)
+
+        # Allow up to 40% failures (bathroom breaks, etc)
+        if len(failed_checks) > total_checks * 0.4:
+            raise ValueError(
+                f"Too many liveness check failures: {len(failed_checks)}/{total_checks} "
+                f"({int(len(failed_checks)/total_checks*100)}% failed, maximum 40% allowed)"
+            )
+
+        # Calculate average confidence for passed checks
+        passed_checks = [c for c in liveness_checks if c.get('face_detected', False)]
+        if passed_checks:
+            avg_confidence = sum(c.get('confidence', 0) for c in passed_checks) / len(passed_checks)
+            # Require reasonable confidence
+            if avg_confidence < 0.5:
+                raise ValueError(
+                    f"Liveness confidence too low: {avg_confidence:.2f} "
+                    f"(minimum 0.5 required)"
+                )
+
 # Load oracle keypair on startup
 try:
     ORACLE = get_oracle_keypair()

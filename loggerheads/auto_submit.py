@@ -5,9 +5,10 @@ Runs at end of day to automatically submit hours to blockchain via oracle API.
 
 import sys
 from datetime import datetime
-from .database import calculate_hours_worked_today, get_screenshots
+from .database import calculate_hours_worked_today, get_screenshots, get_liveness_checks_today
 from .vault_config import VaultConfig
 from .oracle_client import get_oracle_client
+from .app_based_analyzer import generate_app_based_summary
 
 
 def auto_submit():
@@ -42,11 +43,40 @@ def auto_submit():
     # IMPORTANT: Get ALL screenshots from today to get accurate count and timestamps
     all_screenshots = get_screenshots(today_only=True)  # Get all screenshots from today only
 
-    # Build proof summary
+    # Analyze work quality using existing app-based analyzer
+    print(f"\n📊 Analyzing work quality...")
+    screenshots_data = [
+        {'ocr_text': screenshot[3] or '', 'timestamp': screenshot[2]}
+        for screenshot in all_screenshots
+    ]
+
+    work_analysis = generate_app_based_summary(screenshots_data)
+
+    # Get liveness checks from today
+    liveness_checks = get_liveness_checks_today()
+
+    # Build proof summary with work quality metrics
     proof = {
         'screenshot_count': len(all_screenshots),
-        'work_summary': f'{hours} hours tracked'
+        'work_summary': f'{hours} hours tracked',
+        # Work quality metrics
+        'work_percentage': work_analysis.get('work_percentage', 100),
+        'work_screenshots': work_analysis.get('work_screenshots', 0),
+        'non_work_screenshots': work_analysis.get('non_work_screenshots', 0),
+        'apps_detected': list(work_analysis.get('apps_used', {}).keys())[:10],  # Top 10 apps
+        'files_edited': work_analysis.get('files_edited', [])[:20]  # Top 20 files
     }
+
+    # Add liveness checks if available
+    if liveness_checks:
+        proof['liveness_checks'] = [
+            {
+                'timestamp': check[0],
+                'face_detected': bool(check[1]),
+                'confidence': float(check[2])
+            }
+            for check in liveness_checks
+        ]
 
     if all_screenshots:
         # Note: get_screenshots() returns ordered by timestamp DESC (newest first)
@@ -54,6 +84,12 @@ def auto_submit():
         proof['last_screenshot_time'] = all_screenshots[0][2]    # newest (first in list)
 
     print(f"   Screenshots: {proof['screenshot_count']}")
+    print(f"   Work-related: {proof['work_screenshots']} ({proof['work_percentage']}%)")
+    print(f"   Non-work: {proof['non_work_screenshots']}")
+    print(f"   Apps used: {len(proof['apps_detected'])}")
+    if liveness_checks:
+        passed = sum(1 for c in liveness_checks if c[1])  # c[1] = face_detected
+        print(f"   Liveness checks: {passed}/{len(liveness_checks)} passed")
     print(f"   First screenshot: {proof.get('first_screenshot_time', 'N/A')}")
     print(f"   Last screenshot: {proof.get('last_screenshot_time', 'N/A')}")
     print(f"   Submitting as: {hours} hours")

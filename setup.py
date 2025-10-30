@@ -9,7 +9,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="loggerheads",
-    version="1.0.0",
+    version="1.1.0",
     author="Mitchell Chaya",
     author_email="mitchell@loggerheads.io",
     description="Blockchain-powered work tracker with automated payments - track work hours, submit to blockchain, earn USDC automatically",
@@ -32,16 +32,31 @@ setup(
     ],
     python_requires=">=3.8",
     install_requires=[
+        # Core tracking dependencies
         "pygetwindow>=0.0.9",
         "pillow>=10.0.0",
         "pytesseract>=0.3.10",
-        "requests>=2.31.0",
-        "python-dotenv>=1.0.0",
         "pynput>=1.7.6",
+
+        # UI and display
         "rich>=13.0.0",
         "textual>=0.41.0",
+
+        # Blockchain integration
         "solana>=0.30.0",
         "solders>=0.18.0",
+
+        # API and networking
+        "requests>=2.31.0",
+        "flask>=2.3.0",
+        "flask-cors>=4.0.0",
+        "flask-limiter>=3.5.0",
+
+        # Configuration and utilities
+        "python-dotenv>=1.0.0",
+
+        # Liveness detection (biometric verification)
+        "opencv-python>=4.8.0",
     ],
     entry_points={
         "console_scripts": [
