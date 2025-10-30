@@ -53,6 +53,7 @@ activity_log.db
 oracle-keypair.json
 *oracle*.json
 oracle_*.json
+oracle-deploy-env.txt
 
 # Logs
 *.log
@@ -69,4 +70,9 @@ Thumbs.db
 loggerheads_employee_package/
 loggerheads_employee_package.tar.gz
 
+# Rust/Anchor build artifacts
+target/
+.anchor/
+
+# Documentation (internal only)
 docs/*.md

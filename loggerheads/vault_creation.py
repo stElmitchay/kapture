@@ -24,7 +24,7 @@ from .blockchain import (
     USDC_MINT,
     DEFAULT_RPC_URL
 )
-from .oracle import get_oracle_keypair
+from .oracle_client import get_oracle_client
 from .idl_utils import get_discriminator
 from .token_utils import check_vault_funding_requirements
 
@@ -58,27 +58,17 @@ def create_vault_interactive():
         print("\n❌ Invalid wallet address!")
         return None
 
-    # Step 2: Get admin wallet
-    print("\n📝 STEP 2: Your Wallet (Admin)")
+    # Step 2: Get admin wallet (uses saved default or prompts first time)
+    print("\n📝 STEP 2: Your Wallet (Employer)")
     print("-"*70)
 
-    use_default = input("\nUse default wallet (~/.config/solana/id.json)? (y/n): ").strip().lower()
-
-    if use_default == 'y':
-        try:
-            admin_keypair = load_keypair()
-            print(f"   ✓ Using admin wallet: {admin_keypair.pubkey()}")
-        except Exception as e:
-            print(f"\n❌ Could not load default wallet: {e}")
-            return None
-    else:
-        admin_path = input("Path to your admin keypair: ").strip()
-        try:
-            admin_keypair = load_keypair(admin_path)
-            print(f"   ✓ Using admin wallet: {admin_keypair.pubkey()}")
-        except Exception as e:
-            print(f"\n❌ Could not load wallet: {e}")
-            return None
+    try:
+        admin_keypair = load_keypair()  # This will auto-save on first use
+        print(f"\n   ✓ Using wallet: {admin_keypair.pubkey()}")
+    except Exception as e:
+        print(f"\n❌ Could not load wallet")
+        print(f"   Error: {e}")
+        return None
 
     # Step 3: Vault funding and rules
     print("\n📝 STEP 3: Vault Rules")
@@ -224,7 +214,23 @@ def create_vault_on_chain(
         Dict with vault addresses or None on failure
     """
     client = Client(rpc_url)
-    oracle_keypair = get_oracle_keypair()
+
+    # Get oracle public key from oracle service
+    print("\n🔮 Connecting to oracle service...")
+    try:
+        oracle = get_oracle_client()
+        oracle_pubkey_str = oracle.get_oracle_pubkey()
+        oracle_pubkey = Pubkey.from_string(oracle_pubkey_str)
+        print(f"   ✓ Oracle: {oracle_pubkey_str[:16]}...{oracle_pubkey_str[-8:]}")
+    except ConnectionError as e:
+        print(f"\n❌ Cannot reach oracle service!")
+        print(f"   Error: {e}")
+        print(f"\n   The system operator must start the oracle:")
+        print(f"   python3 oracle_service/app.py")
+        return None
+    except Exception as e:
+        print(f"\n❌ Error connecting to oracle: {e}")
+        return None
 
     print("\n1️⃣  Deriving vault PDA...")
     vault_pda, vault_bump = derive_vault_pda(employee_pubkey, admin_keypair.pubkey())
@@ -276,7 +282,7 @@ def create_vault_on_chain(
         AccountMeta(pubkey=vault_pda, is_signer=False, is_writable=True),
         AccountMeta(pubkey=admin_keypair.pubkey(), is_signer=True, is_writable=True),
         AccountMeta(pubkey=employee_pubkey, is_signer=False, is_writable=False),
-        AccountMeta(pubkey=oracle_keypair.pubkey(), is_signer=False, is_writable=False),
+        AccountMeta(pubkey=oracle_pubkey, is_signer=False, is_writable=False),
         AccountMeta(pubkey=admin_token_account, is_signer=False, is_writable=True),
         AccountMeta(pubkey=vault_token_account, is_signer=False, is_writable=True),
         AccountMeta(pubkey=TOKEN_PROGRAM_ID, is_signer=False, is_writable=False),
@@ -322,7 +328,7 @@ def create_vault_on_chain(
     return {
         'admin_pubkey': str(admin_keypair.pubkey()),
         'employee_pubkey': str(employee_pubkey),
-        'oracle_pubkey': str(oracle_keypair.pubkey()),
+        'oracle_pubkey': oracle_pubkey_str,
         'vault_pda': str(vault_pda),
         'vault_token_account': str(vault_token_account),
         'employee_token_account': str(employee_token_account),

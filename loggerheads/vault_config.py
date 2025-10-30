@@ -88,6 +88,29 @@ class VaultConfig:
         """Get auto-submit time."""
         return self.config.get('auto_submit', {}).get('time', '18:00')
 
+    def set_keypair_path(self, keypair_path: str):
+        """
+        Store default keypair path.
+
+        Args:
+            keypair_path: Path to user's Solana keypair file
+        """
+        self.config['keypair_path'] = os.path.expanduser(keypair_path)
+        self.save()
+
+    def get_keypair_path(self) -> str:
+        """
+        Get stored keypair path.
+
+        Returns:
+            Path to keypair file, or None if not set
+        """
+        return self.config.get('keypair_path')
+
+    def has_keypair_path(self) -> bool:
+        """Check if keypair path is configured."""
+        return 'keypair_path' in self.config and bool(self.config['keypair_path'])
+
     def clear(self):
         """Clear all configuration."""
         self.config = {}
@@ -143,12 +166,28 @@ class VaultConfig:
         if is_employer and not is_employee:
             print(f"   ✓ This is you")
 
-        if self.is_auto_submit_enabled():
-            print(f"\n⏰ Auto-Submit: ✅ Enabled")
-            print(f"   Your hours are automatically submitted at {self.get_auto_submit_time()}")
+        # Check both config and actual cron job status
+        from .cron_manager import check_auto_submit_status
+        config_enabled = self.is_auto_submit_enabled()
+        config_time = self.get_auto_submit_time()
+        cron_status = check_auto_submit_status()
+        cron_installed = cron_status['installed']
+
+        print(f"\n⏰ Auto-Submit:")
+        if config_enabled and cron_installed:
+            print(f"   Status: ✅ Enabled and installed")
+            print(f"   Time: {config_time}")
+            print(f"   Your hours are automatically submitted at {config_time}")
+        elif config_enabled and not cron_installed:
+            print(f"   Status: ⚠️  Enabled but cron not installed")
+            print(f"   Run: loggerheads enable-autosubmit")
+        elif not config_enabled and cron_installed:
+            print(f"   Status: ⚠️  Disabled but cron still installed")
+            print(f"   Run: loggerheads disable-autosubmit")
         else:
-            print(f"\n⏰ Auto-Submit: ❌ Disabled")
-            print(f"   Remember to run 'loggerheads submit' daily")
+            print(f"   Status: ❌ Disabled")
+            print(f"   Enable with: loggerheads enable-autosubmit")
+            print(f"   Or manually run: loggerheads submit")
 
         # Only show technical details if explicitly requested (for debugging)
         if show_technical:

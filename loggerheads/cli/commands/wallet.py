@@ -12,7 +12,7 @@ from ..display import print_header, print_info
 def show_balance():
     """Show wallet balances in user-friendly format."""
     try:
-        keypair = load_keypair()
+        keypair = load_keypair()  # Uses saved default
         pubkey = keypair.pubkey()
         my_wallet = str(pubkey)
 

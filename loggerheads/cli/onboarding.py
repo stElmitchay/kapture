@@ -152,7 +152,15 @@ def employee_onboarding():
         print("\nWhat time should we submit? (e.g., 18:00 for 6 PM)")
         time = input("Time (HH:MM, default 18:00): ").strip() or "18:00"
         config.enable_auto_submit(True, time)
-        print(f"\n✅ Auto-submit enabled for {time} daily")
+
+        # Install cron job
+        from ..cron_manager import install_auto_submit_cron
+        print(f"\n⏳ Installing auto-submit...")
+        if install_auto_submit_cron(time):
+            print(f"✅ Auto-submit enabled for {time} daily")
+        else:
+            print(f"⚠️  Config saved but cron installation failed")
+            print(f"   You can manually run: loggerheads submit")
     else:
         config.enable_auto_submit(False)
         print("\n📝 You'll need to manually run 'loggerheads submit' daily")

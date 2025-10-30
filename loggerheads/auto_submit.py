@@ -1,19 +1,18 @@
 """
 Automated submission script.
-Runs at end of day to automatically submit hours to blockchain.
+Runs at end of day to automatically submit hours to blockchain via oracle API.
 """
 
 import sys
 from datetime import datetime
-from .database import calculate_hours_worked_today
-from .blockchain import submit_hours, get_vault_info, derive_vault_pda, format_usdc
+from .database import calculate_hours_worked_today, get_screenshots
 from .vault_config import VaultConfig
-from solders.pubkey import Pubkey
+from .oracle_client import get_oracle_client
 
 
 def auto_submit():
     """
-    Automatically submit today's hours to blockchain.
+    Automatically submit today's hours to oracle API.
     Designed to run as a cron job or systemd timer.
     """
     print(f"\n⏰ Auto-Submit Running at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -29,19 +28,6 @@ def auto_submit():
 
     vault = config.get_vault()
 
-    # Warn if employer is auto-submitting
-    try:
-        from .blockchain import load_keypair
-        keypair = load_keypair()
-        my_wallet = str(keypair.pubkey())
-
-        if my_wallet == vault['admin_pubkey'] and my_wallet != vault['employee_pubkey']:
-            print(f"\n⚠️  EMPLOYER MODE: Submitting on behalf of employee")
-            print(f"   Employee: {vault['employee_pubkey'][:16]}...{vault['employee_pubkey'][-8:]}")
-            print()
-    except:
-        pass
-
     # Calculate hours worked today
     hours = calculate_hours_worked_today()
 
@@ -52,44 +38,74 @@ def auto_submit():
         print("   (This is normal for weekends or days off)")
         return
 
-    # Round hours for blockchain submission (blockchain expects integer)
-    hours_rounded = int(round(hours))
+    # Get work proof (screenshots from today)
+    screenshots = get_screenshots(limit=100)
 
-    print(f"   Submitting as: {hours_rounded} hours (blockchain requires whole numbers)")
+    # Build proof summary
+    proof = {
+        'screenshot_count': len(screenshots),
+        'work_summary': f'{hours} hours tracked'
+    }
 
-    # Submit to blockchain
+    if screenshots:
+        proof['first_screenshot_time'] = screenshots[-1][2]  # timestamp of oldest
+        proof['last_screenshot_time'] = screenshots[0][2]    # timestamp of newest
+
+    print(f"   Screenshots: {proof['screenshot_count']}")
+    print(f"   Submitting as: {hours} hours")
+
+    # Submit to oracle API
     try:
-        print(f"\n📤 Submitting {hours_rounded} hours to blockchain...")
+        print(f"\n📤 Submitting to oracle service...")
 
-        signature = submit_hours(
-            hours_rounded,
-            vault['employee_pubkey'],
-            vault['admin_pubkey'],
-            None  # Uses default oracle keypair
+        oracle = get_oracle_client()
+
+        # Check oracle is reachable
+        try:
+            health = oracle.health_check()
+            print(f"   ✓ Oracle online: {health['oracle_pubkey'][:16]}...")
+        except ConnectionError as e:
+            print(f"\n❌ Cannot reach oracle service!")
+            print(f"   Error: {e}")
+            print(f"\n   Make sure oracle is running:")
+            print(f"   python3 oracle_service/app.py")
+            sys.exit(1)
+
+        # Submit hours
+        result = oracle.submit_hours(
+            employee_wallet=vault['employee_pubkey'],
+            admin_wallet=vault['admin_pubkey'],
+            hours=hours,
+            proof=proof
         )
 
         print(f"✅ Success!")
-        print(f"📝 Transaction: {signature}")
-        print(f"🔍 Explorer: https://explorer.solana.com/tx/{signature}?cluster=devnet")
+        print(f"📝 Transaction: {result['transaction_signature']}")
+        print(f"🔍 Explorer: {result['explorer_url']}")
 
         # Show vault status
-        vault_pda, _ = derive_vault_pda(
-            Pubkey.from_string(vault['employee_pubkey']),
-            Pubkey.from_string(vault['admin_pubkey'])
-        )
+        vault_status = result['vault_status']
+        print(f"\n💰 Vault Status:")
+        print(f"   Unlocked: ${vault_status['unlocked_amount']:.2f} USDC")
 
-        vault_info = get_vault_info(vault_pda)
+        remaining = vault_status['locked_amount'] - vault_status['unlocked_amount']
+        print(f"   Remaining: ${remaining:.2f} USDC")
 
-        if vault_info:
-            print(f"\n💰 Vault Status:")
-            print(f"   Unlocked: {format_usdc(vault_info['unlocked_amount'])} USDC")
-            print(f"   Locked:   {format_usdc(vault_info['locked_amount'] - vault_info['unlocked_amount'])} USDC")
+        if vault_status['unlocked_amount'] > 0:
+            print(f"\n💡 You can withdraw: loggerheads withdraw")
 
-            if vault_info['unlocked_amount'] > 0:
-                print(f"\n💡 You can withdraw: loggerheads withdraw")
-
+    except ConnectionError as e:
+        print(f"❌ Connection Error: {e}")
+        print(f"\n   Make sure oracle service is running:")
+        print(f"   python3 oracle_service/app.py")
+        sys.exit(1)
+    except ValueError as e:
+        print(f"❌ Submission Error: {e}")
+        sys.exit(1)
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ Unexpected Error: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 
     print("\n" + "="*60)

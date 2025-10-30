@@ -3,7 +3,7 @@ Main CLI entry point - clean and modular.
 """
 
 import sys
-from .commands import tracking, wallet, work, vault, demo
+from .commands import tracking, wallet, work, vault, demo, autosubmit
 from .onboarding import simple_onboarding
 from .menu import interactive_menu, show_welcome_and_launch
 from ..autostart import install_autostart, uninstall_autostart, check_autostart_status
@@ -48,7 +48,10 @@ COMMAND_MAP = {
     
     # Auto-submit
     'auto-submit': auto_submit,
-    
+    'enable-autosubmit': autosubmit.enable_autosubmit,
+    'disable-autosubmit': autosubmit.disable_autosubmit,
+    'autosubmit-status': autosubmit.show_autosubmit_status,
+
     # Demo mode
     'demo': demo.demo_command,
 }
@@ -93,13 +96,16 @@ def print_help():
 
 🔧 OTHER COMMANDS:
 
-    loggerheads logs         View live logs
-    loggerheads screenshots  View recent screenshots
-    loggerheads demo         Generate fake work data (for testing/demos)
-    loggerheads install      Enable auto-start on boot
-    loggerheads menu         Interactive menu
-    loggerheads config       View configuration
-    loggerheads help         Show this help
+    loggerheads logs                View live logs
+    loggerheads screenshots         View recent screenshots
+    loggerheads demo                Generate fake work data (for testing/demos)
+    loggerheads install             Enable auto-start on boot
+    loggerheads menu                Interactive menu
+    loggerheads config              View configuration
+    loggerheads enable-autosubmit   Enable automatic daily submission
+    loggerheads disable-autosubmit  Disable automatic daily submission
+    loggerheads autosubmit-status   Check auto-submit status
+    loggerheads help                Show this help
 
 ═══════════════════════════════════════════════════════════
 

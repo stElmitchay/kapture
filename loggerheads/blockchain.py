@@ -36,23 +36,137 @@ USDC_MINT = Pubkey.from_string("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU")
 DEFAULT_RPC_URL = "https://api.devnet.solana.com"
 
 
+def get_keypair_path_from_solana_config() -> str:
+    """
+    Get the keypair path from Solana CLI config.
+
+    Returns:
+        Path to keypair file from solana config
+
+    Raises:
+        RuntimeError: If solana config is not set up
+    """
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["solana", "config", "get"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            # Parse output to find "Keypair Path:"
+            for line in result.stdout.split('\n'):
+                if 'Keypair Path:' in line:
+                    path = line.split(':', 1)[1].strip()
+                    return path
+        raise RuntimeError("Could not find Keypair Path in solana config")
+    except FileNotFoundError:
+        raise RuntimeError(
+            "Solana CLI not installed!\n\n"
+            "Install it with:\n"
+            "  sh -c \"$(curl -sSfL https://release.solana.com/stable/install)\""
+        )
+    except Exception as e:
+        raise RuntimeError(f"Error reading solana config: {e}")
+
+
+def get_default_keypair_path() -> str:
+    """
+    Get keypair path - from config first, otherwise prompt user.
+
+    Returns:
+        Path to keypair file
+    """
+    from .vault_config import VaultConfig
+
+    config = VaultConfig()
+
+    # Check if we have a saved keypair path
+    if config.has_keypair_path():
+        return config.get_keypair_path()
+
+    # First time - need to set it up
+    print("\n🔐 FIRST TIME SETUP: Set Your Default Wallet")
+    print("="*70)
+    print("We need to know which wallet you want to use for Kapture.")
+    print("This will be saved and used automatically from now on.")
+    print()
+
+    # Try to get from solana config first
+    try:
+        solana_path = get_keypair_path_from_solana_config()
+        print(f"Found keypair in Solana config: {solana_path}")
+        use_it = input("\nUse this wallet? (y/n): ").strip().lower()
+        if use_it == 'y':
+            keypair_path = solana_path
+        else:
+            keypair_path = None
+    except Exception:
+        keypair_path = None
+
+    # If not using solana config, ask for path
+    if not keypair_path:
+        print("\nEnter the path to your keypair file:")
+        print("  Example: ~/.config/solana/id.json")
+        print("  Example: ~/my-wallet.json")
+        print()
+        keypair_path = input("Keypair path: ").strip()
+
+        if not keypair_path:
+            raise ValueError("Keypair path is required!")
+
+    # Verify the file exists before saving
+    expanded_path = os.path.expanduser(keypair_path)
+    if not os.path.exists(expanded_path):
+        raise FileNotFoundError(
+            f"Keypair file not found: {expanded_path}\n\n"
+            "To create a new wallet:\n"
+            "  solana-keygen new"
+        )
+
+    # Save it
+    config.set_keypair_path(keypair_path)
+    print(f"\n✓ Default wallet saved: {keypair_path}")
+    print("  (This will be used automatically from now on)")
+    print()
+
+    return keypair_path
+
+
 def load_keypair(keypair_path: str = None) -> Keypair:
     """
     Load keypair from file.
 
     Args:
-        keypair_path: Path to keypair JSON file. Defaults to ~/.config/solana/id.json
+        keypair_path: Path to keypair JSON file. If None, uses saved default.
 
     Returns:
         Keypair object
+
+    Raises:
+        FileNotFoundError: If keypair file doesn't exist
+        ValueError: If keypair file is invalid
     """
-    if keypair_path is None:
-        keypair_path = os.path.expanduser("~/.config/solana/id.json")
+    if not keypair_path:
+        keypair_path = get_default_keypair_path()
 
-    with open(keypair_path, 'r') as f:
-        secret_key = json.load(f)
+    # Expand ~ to home directory
+    keypair_path = os.path.expanduser(keypair_path)
 
-    return Keypair.from_bytes(bytes(secret_key))
+    if not os.path.exists(keypair_path):
+        raise FileNotFoundError(
+            f"Keypair file not found: {keypair_path}\n\n"
+            "To create a new wallet:\n"
+            "  solana-keygen new --outfile ~/my-wallet.json"
+        )
+
+    try:
+        with open(keypair_path, 'r') as f:
+            secret_key = json.load(f)
+        return Keypair.from_bytes(bytes(secret_key))
+    except Exception as e:
+        raise ValueError(f"Invalid keypair file {keypair_path}: {e}")
 
 
 def derive_vault_pda(owner: Pubkey, admin: Pubkey) -> tuple[Pubkey, int]:

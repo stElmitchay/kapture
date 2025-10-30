@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: kapture-oracle
+    env: python
+    buildCommand: "pip install -r requirements.txt && cd .. && pip install -e ."
+    startCommand: "cd oracle_service && python3 app.py"
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: PYTHON_VERSION
+        value: 3.11.0
