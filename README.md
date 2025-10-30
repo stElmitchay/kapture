@@ -121,7 +121,7 @@ Test that everything works:
 ```
 
 You should see:
-```
+```text
 ✅ All dependencies installed correctly!
 ✅ All modules working correctly!
 ✅ Installation test complete!

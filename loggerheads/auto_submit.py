@@ -44,7 +44,7 @@ def auto_submit():
     all_screenshots = get_screenshots(today_only=True)  # Get all screenshots from today only
 
     # Analyze work quality using existing app-based analyzer
-    print(f"\n📊 Analyzing work quality...")
+    print("\n📊 Analyzing work quality...")
     screenshots_data = [
         {'ocr_text': screenshot[3] or '', 'timestamp': screenshot[2]}
         for screenshot in all_screenshots

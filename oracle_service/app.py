@@ -115,7 +115,7 @@ def verify_work_proof(proof: dict, hours: float) -> None:
         # Warn if suspiciously high non-work activity
         non_work_screenshots = proof.get('non_work_screenshots', 0)
         total_screenshots = proof.get('screenshot_count', 1)
-        if non_work_screenshots > total_screenshots * 0.6:  # More than 60% non-work
+        if non_work_screenshots > total_screenshots * 0.5:  # More than 50% non-work
             raise ValueError(
                 f"Too much non-work activity: {non_work_screenshots}/{total_screenshots} screenshots "
                 f"({100 - work_percentage}% non-work)"

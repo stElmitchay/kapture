@@ -3,7 +3,7 @@
 
 # Core tracking dependencies
 pygetwindow>=0.0.9
-pillow>=10.0.0
+pillow>=10.0.1
 pytesseract>=0.3.10
 pynput>=1.7.6
 
@@ -17,12 +17,12 @@ solders>=0.18.0
 
 # API and networking
 requests>=2.31.0
-flask>=2.3.0
-flask-cors>=4.0.0
+flask>=2.3.3
+flask-cors>=4.1.0
 flask-limiter>=3.5.0
 
 # Configuration and utilities
 python-dotenv>=1.0.0
 
 # Liveness detection (biometric verification)
-opencv-python>=4.8.0
+opencv-python>=4.8.1

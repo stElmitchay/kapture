@@ -135,11 +135,11 @@ if __name__ == "__main__":
     result = check_liveness()
 
     if result['face_detected']:
-        print(f"✅ Face detected!")
+        print("✅ Face detected!")
         print(f"   Confidence: {result['confidence']}")
         print(f"   Face count: {result['face_count']}")
     else:
-        print(f"❌ No face detected")
+        print("❌ No face detected")
         if 'error' in result:
             print(f"   Error: {result['error']}")
 
