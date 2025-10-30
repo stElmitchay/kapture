@@ -76,3 +76,6 @@ target/
 
 # Documentation (internal only)
 docs/*.md
+
+DEPLOY_GUIDE.md
+RENDER_DEPLOY_NOW.md

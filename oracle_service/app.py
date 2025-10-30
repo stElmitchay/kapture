@@ -106,7 +106,9 @@ def submit_hours_endpoint():
         try:
             Pubkey.from_string(employee_wallet)
             Pubkey.from_string(admin_wallet)
-        except:
+        except (ValueError, Exception) as e:
+            # Log the exception for debugging
+            print(f"⚠️  Invalid wallet address: {e}")
             return jsonify({
                 'success': False,
                 'error': 'Invalid wallet address format'
@@ -264,15 +266,21 @@ if __name__ == '__main__':
     # Use PORT env var or default to 5001 (5000 conflicts with macOS AirPlay)
     port = int(os.getenv('PORT', 5001))
 
+    # Configure debug mode via environment variable (defaults to False for production)
+    # Set FLASK_DEBUG=1 or FLASK_DEBUG=true for debug mode
+    debug_env = os.getenv('FLASK_DEBUG', 'false').lower()
+    debug_mode = debug_env in ('1', 'true', 'yes')
+
     print("\n" + "="*70)
     print("🔮 KAPTURE ORACLE SERVICE")
     print("="*70)
     print(f"\n✅ Oracle Public Key: {ORACLE_PUBKEY}")
     print(f"\n📡 Starting API server on port {port}...")
+    print(f"   Debug Mode: {'ON' if debug_mode else 'OFF'}")
     print(f"   Employers: Use this oracle pubkey when creating vaults")
     print(f"   Employees: Submit hours to this service")
     print(f"\n   URL: http://localhost:{port}")
     print("\n" + "="*70 + "\n")
 
     # Run Flask app
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)
