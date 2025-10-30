@@ -82,29 +82,49 @@ def save_screenshot(file_path, extracted_text="", log_id=None, timestamp=None):
     conn.close()
 
 
-def get_screenshots(limit=None):
+def get_screenshots(limit=None, today_only=False, db_path=None):
     """
     Retrieve screenshots from database.
 
     Args:
         limit (int, optional): Maximum number of screenshots to retrieve
+        today_only (bool, optional): If True, only return today's screenshots
+        db_path (str, optional): Custom database path (defaults to standard path)
 
     Returns:
         list: List of tuples containing screenshot data
     """
-    db_path = get_db_path()
+    if db_path is None:
+        db_path = get_db_path()
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    if limit:
-        cursor.execute(
-            "SELECT id, file_path, timestamp, extracted_text FROM screenshots ORDER BY timestamp DESC LIMIT ?",
-            (limit,)
-        )
+    if today_only:
+        # Filter to today's screenshots only
+        if limit:
+            cursor.execute(
+                "SELECT id, file_path, timestamp, extracted_text FROM screenshots "
+                "WHERE DATE(timestamp) = DATE('now') "
+                "ORDER BY timestamp DESC LIMIT ?",
+                (limit,)
+            )
+        else:
+            cursor.execute(
+                "SELECT id, file_path, timestamp, extracted_text FROM screenshots "
+                "WHERE DATE(timestamp) = DATE('now') "
+                "ORDER BY timestamp DESC"
+            )
     else:
-        cursor.execute(
-            "SELECT id, file_path, timestamp, extracted_text FROM screenshots ORDER BY timestamp DESC"
-        )
+        # All screenshots (original behavior)
+        if limit:
+            cursor.execute(
+                "SELECT id, file_path, timestamp, extracted_text FROM screenshots ORDER BY timestamp DESC LIMIT ?",
+                (limit,)
+            )
+        else:
+            cursor.execute(
+                "SELECT id, file_path, timestamp, extracted_text FROM screenshots ORDER BY timestamp DESC"
+            )
 
     results = cursor.fetchall()
     conn.close()

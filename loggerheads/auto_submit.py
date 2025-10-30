@@ -39,19 +39,23 @@ def auto_submit():
         return
 
     # Get work proof (screenshots from today)
-    screenshots = get_screenshots(limit=100)
+    # IMPORTANT: Get ALL screenshots from today to get accurate count and timestamps
+    all_screenshots = get_screenshots(today_only=True)  # Get all screenshots from today only
 
     # Build proof summary
     proof = {
-        'screenshot_count': len(screenshots),
+        'screenshot_count': len(all_screenshots),
         'work_summary': f'{hours} hours tracked'
     }
 
-    if screenshots:
-        proof['first_screenshot_time'] = screenshots[-1][2]  # timestamp of oldest
-        proof['last_screenshot_time'] = screenshots[0][2]    # timestamp of newest
+    if all_screenshots:
+        # Note: get_screenshots() returns ordered by timestamp DESC (newest first)
+        proof['first_screenshot_time'] = all_screenshots[-1][2]  # oldest (last in list)
+        proof['last_screenshot_time'] = all_screenshots[0][2]    # newest (first in list)
 
     print(f"   Screenshots: {proof['screenshot_count']}")
+    print(f"   First screenshot: {proof.get('first_screenshot_time', 'N/A')}")
+    print(f"   Last screenshot: {proof.get('last_screenshot_time', 'N/A')}")
     print(f"   Submitting as: {hours} hours")
 
     # Submit to oracle API
