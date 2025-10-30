@@ -140,9 +140,23 @@ def calculate_hours_worked_today(db_path=None):
     # Parse timestamps
     times = [datetime.fromisoformat(ts[0]) for ts in timestamps]
 
-    # Calculate time span from first to last screenshot
-    time_span = times[-1] - times[0]
-    hours_worked = time_span.total_seconds() / 3600
+    # FIXED: Calculate based on screenshot frequency, not time span
+    # Screenshots are taken every 10 seconds during active work
+    # Count gaps between screenshots to determine active vs idle periods
+
+    active_seconds = 0
+    MAX_GAP_SECONDS = 60  # If gap > 60 seconds, consider it idle time (missed screenshots)
+
+    for i in range(len(times) - 1):
+        gap_seconds = (times[i+1] - times[i]).total_seconds()
+
+        if gap_seconds <= MAX_GAP_SECONDS:
+            # Active period - count the gap as work time
+            active_seconds += gap_seconds
+        # else: Idle period (break, lunch, stepped away) - don't count
+
+    # Convert to hours
+    hours_worked = active_seconds / 3600
 
     # Return actual hours (round to 1 decimal place for readability)
     return round(hours_worked, 1)

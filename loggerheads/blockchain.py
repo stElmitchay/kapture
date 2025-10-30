@@ -356,7 +356,7 @@ def get_vault_info(vault_pda: Pubkey, rpc_url: str = DEFAULT_RPC_URL) -> dict:
 
         # Parse vault struct (after 8-byte discriminator)
         # owner (32) + admin (32) + oracle (32) + locked_amount (8) + unlocked_amount (8) +
-        # daily_target_hours (1) + daily_unlock (8) + bump (1)
+        # daily_target_hours (1) + daily_unlock (8) + last_submission_day (8) + bump (1)
         offset = 8
         owner = Pubkey.from_bytes(data[offset:offset+32])
         offset += 32
@@ -372,6 +372,8 @@ def get_vault_info(vault_pda: Pubkey, rpc_url: str = DEFAULT_RPC_URL) -> dict:
         offset += 1
         daily_unlock = struct.unpack('<Q', data[offset:offset+8])[0]
         offset += 8
+        last_submission_day = struct.unpack('<q', data[offset:offset+8])[0]  # i64 (signed)
+        offset += 8
         bump = struct.unpack('<B', data[offset:offset+1])[0]
 
         return {
@@ -382,6 +384,7 @@ def get_vault_info(vault_pda: Pubkey, rpc_url: str = DEFAULT_RPC_URL) -> dict:
             'unlocked_amount': unlocked_amount,
             'daily_target_hours': daily_target_hours,
             'daily_unlock': daily_unlock,
+            'last_submission_day': last_submission_day,
             'bump': bump
         }
     except Exception as e:

@@ -23,6 +23,7 @@ pub mod workchain_program {
         vault.unlocked_amount = 0;
         vault.daily_target_hours = daily_target_hours;
         vault.daily_unlock = daily_unlock;
+        vault.last_submission_day = 0; // Initialize to 0 (allows immediate first submission)
         vault.bump = ctx.bumps.vault;
 
         // Transfer USDC from admin to vault
@@ -54,6 +55,15 @@ pub mod workchain_program {
     ) -> Result<()> {
         let vault = &mut ctx.accounts.vault;
 
+        // CRITICAL FIX: Prevent multiple submissions per day
+        let clock = Clock::get()?;
+        let current_day = clock.unix_timestamp / 86400; // Convert to day number
+
+        require!(
+            vault.last_submission_day < current_day,
+            ErrorCode::AlreadySubmittedToday
+        );
+
         msg!("Hours worked: {}", hours_worked);
         msg!("Target hours: {}", vault.daily_target_hours);
 
@@ -81,6 +91,9 @@ pub mod workchain_program {
             // Target not met → forfeit
             msg!("❌ Target not met. No unlock.");
         }
+
+        // Update last submission day
+        vault.last_submission_day = current_day;
 
         Ok(())
     }
@@ -140,11 +153,12 @@ pub struct Vault {
     pub unlocked_amount: u64,       // USDC available to withdraw (8)
     pub daily_target_hours: u8,     // Target hours per day (1)
     pub daily_unlock: u64,          // USDC to unlock per successful day (8)
+    pub last_submission_day: i64,   // Last day hours were submitted (8) - prevents double submission
     pub bump: u8,                   // PDA bump (1)
 }
 
 impl Vault {
-    pub const LEN: usize = 8 + 32 + 32 + 32 + 8 + 8 + 1 + 8 + 1; // 130 bytes
+    pub const LEN: usize = 8 + 32 + 32 + 32 + 8 + 8 + 1 + 8 + 8 + 1; // 138 bytes
 }
 
 // ========== INSTRUCTION CONTEXTS ==========
@@ -204,10 +218,16 @@ pub struct Withdraw<'info> {
 
     pub owner: Signer<'info>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = vault_token_account.owner == vault.key() @ ErrorCode::Unauthorized
+    )]
     pub vault_token_account: Account<'info, TokenAccount>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = owner_token_account.owner == owner.key() @ ErrorCode::Unauthorized
+    )]
     pub owner_token_account: Account<'info, TokenAccount>,
 
     pub token_program: Program<'info, Token>,
@@ -234,4 +254,7 @@ pub enum ErrorCode {
 
     #[msg("Underflow")]
     Underflow,
+
+    #[msg("Already submitted hours today - one submission per day allowed")]
+    AlreadySubmittedToday,
 }
