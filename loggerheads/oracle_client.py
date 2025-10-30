@@ -26,7 +26,7 @@ class OracleClient:
     def _get_default_oracle_url(self) -> str:
         """Get oracle URL from environment or use default."""
         import os
-        return os.getenv('KAPTURE_ORACLE_URL', 'http://localhost:5001')
+        return os.getenv('KAPTURE_ORACLE_URL', 'https://kapture-oracle.onrender.com')
 
     def health_check(self) -> dict:
         """
