@@ -8,14 +8,14 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="loggerheads",
+    name="kapturee",
     version="1.1.0",
-    author="Mitchell Chaya",
-    author_email="mitchell@loggerheads.io",
+    author="Mitchel Dennis",
+    author_email="elmitchay@gmail.com",
     description="Blockchain-powered work tracker with automated payments - track work hours, submit to blockchain, earn USDC automatically",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/stElmitchay/loggerheads",
+    url="https://github.com/stElmitchay/kapture",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -67,7 +67,7 @@ setup(
     include_package_data=True,
     keywords="work-tracker blockchain solana cryptocurrency automation time-tracking",
     project_urls={
-        "Bug Reports": "https://github.com/stElmitchay/loggerheads/issues",
-        "Documentation": "https://github.com/stElmitchay/loggerheads#readme",
+        "Bug Reports": "https://github.com/stElmitchay/kapture/issues",
+        "Documentation": "https://github.com/stElmitchay/kapture#readme",
     },
 )
