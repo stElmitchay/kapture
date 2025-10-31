@@ -48,7 +48,7 @@ You're a UX engineer earning $3,000/month. On day 1:
 ### 🚀 ONE COMMAND (Recommended)
 
 ```bash
-pip3 install -r requirements.txt
+pip3 install loggerheads
 ```
 
 That's it! This installs **everything** you need including:
@@ -81,8 +81,8 @@ loggerheads
 
 Open your terminal and run:
 ```bash
-git clone https://github.com/stElmitchay/kapture
-cd kapture
+git clone https://github.com/stElmitchay/loggerheads
+cd loggerheads
 ```
 
 #### Step 2: Install Python Dependencies

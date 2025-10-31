@@ -39,7 +39,8 @@ class OracleClient:
             ConnectionError: If oracle is unreachable
         """
         try:
-            response = requests.get(f"{self.base_url}/health", timeout=5)
+            # 60 second timeout to handle Render free tier cold starts (can take 30-60s)
+            response = requests.get(f"{self.base_url}/health", timeout=60)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
@@ -56,7 +57,8 @@ class OracleClient:
             ConnectionError: If oracle is unreachable
         """
         try:
-            response = requests.get(f"{self.base_url}/oracle-pubkey", timeout=5)
+            # 60 second timeout to handle Render free tier cold starts (can take 30-60s)
+            response = requests.get(f"{self.base_url}/oracle-pubkey", timeout=60)
             response.raise_for_status()
             data = response.json()
             return data['oracle_pubkey']
@@ -139,10 +141,11 @@ class OracleClient:
         }
 
         try:
+            # 60 second timeout to handle Render free tier cold starts
             response = requests.post(
                 f"{self.base_url}/vault-status",
                 json=payload,
-                timeout=10
+                timeout=60
             )
 
             data = response.json()
